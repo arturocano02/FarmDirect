@@ -4,27 +4,61 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { SignOutButton } from "./sign-out-button";
-import { User, ChevronDown, LogIn } from "lucide-react";
+import { User, ChevronDown, Shield, Store, Package } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+type UserRole = "customer" | "farm" | "admin";
 
 export function UserMenu() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function fetchUserAndRole() {
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Fetch role from profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+        
+        // Determine effective role
+        // Note: Admin email allowlist is checked server-side, but we can check metadata
+        const profileRole = (profile as { role?: string } | null)?.role;
+        const metadataRole = session.user.user_metadata?.role;
+        const effectiveRole = (profileRole || metadataRole || "customer") as UserRole;
+        setRole(effectiveRole);
+      }
+      
       setIsLoading(false);
-    });
+    }
+
+    fetchUserAndRole();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setUser(session?.user ?? null);
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single();
+          const profileRole = (profile as { role?: string } | null)?.role;
+          const metadataRole = session.user.user_metadata?.role;
+          setRole((profileRole || metadataRole || "customer") as UserRole);
+        } else {
+          setRole(null);
+        }
       }
     );
 
@@ -95,6 +129,30 @@ export function UserMenu() {
           </div>
           
           <div className="p-1">
+            {/* Admin link - only show for admins */}
+            {role === "admin" && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <Shield className="h-4 w-4" />
+                Admin Console
+              </Link>
+            )}
+            
+            {/* Farm portal link - only show for farm users */}
+            {role === "farm" && (
+              <Link
+                href="/farm-portal"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <Store className="h-4 w-4" />
+                Seller Portal
+              </Link>
+            )}
+
             <Link
               href="/account"
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
@@ -108,7 +166,7 @@ export function UserMenu() {
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
               onClick={() => setIsOpen(false)}
             >
-              <LogIn className="h-4 w-4" />
+              <Package className="h-4 w-4" />
               My Orders
             </Link>
           </div>

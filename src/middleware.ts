@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { createServerClient } from "@supabase/ssr";
+import { 
+  getEffectiveRole, 
+  isEmailAdminAllowlisted, 
+  getHomePathForRole,
+  logRoleDetection,
+} from "@/lib/auth/roles";
 
 // Routes that require authentication
 const CUSTOMER_ROUTES = [
@@ -78,6 +84,9 @@ export async function middleware(request: NextRequest) {
       ADMIN_ROUTES.some(route => pathname.startsWith(route));
 
     if (isProtected) {
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[middleware] Unauthenticated access to ${pathname}, redirecting to login`);
+      }
       const redirectUrl = new URL("/login", request.url);
       redirectUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(redirectUrl);
@@ -85,57 +94,92 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Get user role from metadata or profile
-  let role = user.user_metadata?.role;
-  
-  if (!role) {
-    // Fetch from profiles table
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    role = profile?.role || "customer";
+  // Fetch profile role from database
+  let profileRole: string | null = null;
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError && profileError.code !== "PGRST116") {
+    // Log error but continue with metadata role
+    console.error("[middleware] Error fetching profile:", profileError);
+  } else if (profile) {
+    profileRole = (profile as { role: string }).role;
   }
 
-  // Check customer routes - only customers and admins allowed
+  // Get effective role using the new utility
+  const metadataRole = user.user_metadata?.role;
+  const isAllowlisted = isEmailAdminAllowlisted(user.email);
+  const effectiveRole = getEffectiveRole({
+    sessionUser: user,
+    profileRole,
+  });
+
+  // Log role detection in development
+  logRoleDetection("middleware", {
+    email: user.email,
+    profileRole,
+    metadataRole,
+    effectiveRole,
+    isAllowlisted,
+    decision: `Checking route: ${pathname}`,
+  });
+
+  // Check route access based on effective role
   const isCustomerRoute = CUSTOMER_ROUTES.some(route => pathname.startsWith(route));
-  if (isCustomerRoute && role === "farm") {
-    // Farms cannot access customer-only routes
-    const redirectUrl = new URL("/farm-portal", request.url);
-    redirectUrl.searchParams.set("message", "Please use the marketplace to browse as a customer");
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  // Check farm routes - only farms and admins allowed
   const isFarmRoute = FARM_ROUTES.some(route => pathname.startsWith(route));
-  if (isFarmRoute && role === "customer") {
-    // Customers cannot access farm routes
-    const redirectUrl = new URL("/", request.url);
-    redirectUrl.searchParams.set("message", "This area is for farm sellers only");
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  // Check admin routes - only admins allowed
   const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route));
-  if (isAdminRoute && role !== "admin") {
-    // Non-admins cannot access admin routes
-    const redirectUrl = new URL(role === "farm" ? "/farm-portal" : "/", request.url);
-    return NextResponse.redirect(redirectUrl);
+
+  // Admin can access everything
+  if (effectiveRole === "admin") {
+    // Admin accessing admin routes - allow
+    if (isAdminRoute) {
+      return response;
+    }
+    // Admin can also access customer/farm routes if needed
+    return response;
   }
 
-  // Farm users accessing farm-portal: check if they need onboarding
-  if (isFarmRoute && role === "farm" && !pathname.includes("/onboarding")) {
-    const { data: farm } = await supabase
-      .from("farms")
-      .select("id")
-      .eq("owner_user_id", user.id)
-      .single();
-
-    if (!farm) {
-      // No farm exists, redirect to onboarding
-      return NextResponse.redirect(new URL("/farm-portal/onboarding", request.url));
+  // Non-admin trying to access admin routes
+  if (isAdminRoute) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[middleware] Non-admin (${effectiveRole}) blocked from /admin, redirecting`);
     }
+    const redirectPath = getHomePathForRole(effectiveRole);
+    return NextResponse.redirect(new URL(redirectPath, request.url));
+  }
+
+  // Farm user accessing farm portal
+  if (effectiveRole === "farm") {
+    if (isCustomerRoute) {
+      // Farms cannot access customer-only routes
+      return NextResponse.redirect(new URL("/farm-portal", request.url));
+    }
+    
+    // Check if farm user needs setup
+    if (isFarmRoute && !pathname.includes("/setup") && !pathname.includes("/onboarding")) {
+      const { data: farm } = await supabase
+        .from("farms")
+        .select("id")
+        .eq("owner_user_id", user.id)
+        .single();
+
+      if (!farm) {
+        return NextResponse.redirect(new URL("/farm-portal/setup", request.url));
+      }
+    }
+    return response;
+  }
+
+  // Customer role
+  if (effectiveRole === "customer") {
+    if (isFarmRoute) {
+      // Customers cannot access farm routes
+      return NextResponse.redirect(new URL("/farms", request.url));
+    }
+    return response;
   }
 
   return response;

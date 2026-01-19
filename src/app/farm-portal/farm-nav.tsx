@@ -7,7 +7,8 @@ import {
   Package, 
   ShoppingBag, 
   Settings, 
-  Eye
+  Eye,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,13 +41,11 @@ export function FarmPortalNav({ farmSlug }: FarmPortalNavProps) {
       icon: Settings,
       label: "Farm Profile",
     },
-    // Future: Payouts
-    // {
-    //   href: "/farm-portal/payouts",
-    //   icon: CreditCard,
-    //   label: "Payouts",
-    //   disabled: true,
-    // },
+    {
+      href: "/farm-portal/payouts",
+      icon: CreditCard,
+      label: "Payouts",
+    },
   ];
 
   return (

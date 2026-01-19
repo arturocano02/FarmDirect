@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { isAdminEmail } from "@/lib/server/admin-emails";
-import { getHomePathForRole } from "@/lib/auth/redirect-by-role";
+import { 
+  isEmailAdminAllowlisted, 
+  getEffectiveRole, 
+  getHomePathForRole,
+  logRoleDetection 
+} from "@/lib/auth/roles";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -15,22 +19,36 @@ export async function GET(request: Request) {
     if (!error && data.user) {
       const email = data.user.email || "";
       
-      // Get user role from profile or metadata
-      let userRole = data.user.user_metadata?.role;
+      // Get profile role from database
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any)
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
       
-      if (!userRole) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: profile } = await (supabase as any)
-          .from("profiles")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-        userRole = profile?.role || "customer";
-      }
+      const profileRole = profile?.role || null;
+      const metadataRole = data.user.user_metadata?.role;
+      const isAllowlisted = isEmailAdminAllowlisted(email);
+      
+      // Get effective role using centralized logic
+      let userRole = getEffectiveRole({
+        sessionUser: data.user,
+        profileRole,
+      });
 
-      // Check if user should be admin based on email allowlist
-      if (isAdminEmail(email) && userRole !== "admin") {
-        // Promote to admin
+      // Log role detection
+      logRoleDetection("auth/callback", {
+        email,
+        profileRole,
+        metadataRole,
+        effectiveRole: userRole,
+        isAllowlisted,
+        decision: "Processing auth callback",
+      });
+
+      // If user is in admin allowlist but profile isn't admin, update it
+      if (isAllowlisted && profileRole !== "admin") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error: updateError } = await (supabase as any)
           .from("profiles")
@@ -38,8 +56,10 @@ export async function GET(request: Request) {
           .eq("id", data.user.id);
 
         if (!updateError) {
-          console.log(`[auth/callback] Promoted ${email} to admin`);
+          console.log(`[auth/callback] Promoted ${email} to admin via allowlist`);
           userRole = "admin";
+        } else {
+          console.error(`[auth/callback] Error promoting to admin:`, updateError);
         }
       }
 
@@ -67,6 +87,7 @@ export async function GET(request: Request) {
         redirectPath = getHomePathForRole(userRole);
       }
 
+      console.log(`[auth/callback] Redirecting ${email} (role=${userRole}) to ${redirectPath}`);
       return NextResponse.redirect(`${origin}${redirectPath}`);
     }
   }

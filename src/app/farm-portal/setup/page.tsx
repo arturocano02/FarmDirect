@@ -1,62 +1,75 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { FarmSetupWizard } from "@/components/farm-portal/setup-wizard";
+
 export const metadata = {
-  title: "Farm Setup",
+  title: "Farm Setup | Farmlink",
   description: "Set up your farm profile on Farmlink",
 };
 
-export default function FarmSetupPage() {
+export default async function FarmSetupPage() {
+  const supabase = await createClient();
+
+  // Check if user is logged in
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login?redirect=/farm-portal/setup");
+  }
+
+  // Check if user is a farm role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  // Type assertion for profile
+  const profileData = profile as { role: string } | null;
+
+  if (!profileData || profileData.role !== "farm") {
+    // Not a farm user, redirect based on role
+    if (profileData?.role === "admin") {
+      redirect("/admin");
+    }
+    redirect("/farms");
+  }
+
+  // Check if user already has a completed farm
+  const { data: existingFarm } = await supabase
+    .from("farms")
+    .select("id, name, slug, short_description, story, address, postcode, postcode_rules, delivery_days, cutoff_time, min_order_value, delivery_fee, hero_image_url, logo_url, contact_email, status")
+    .eq("owner_user_id", user.id)
+    .single();
+
+  // Type assertion for farm
+  type ExistingFarmType = {
+    id: string;
+    name: string;
+    slug: string;
+    short_description: string | null;
+    story: string | null;
+    address: string | null;
+    postcode: string | null;
+    postcode_rules: string[] | null;
+    delivery_days: string[] | null;
+    cutoff_time: string | null;
+    min_order_value: number | null;
+    delivery_fee: number | null;
+    hero_image_url: string | null;
+    logo_url: string | null;
+    contact_email: string | null;
+    status: string;
+  };
+
+  const farmData = existingFarm as ExistingFarmType | null;
+
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div className="text-center">
-        <h1 className="section-heading">Set Up Your Farm</h1>
-        <p className="mt-2 text-muted-foreground">
-          Complete these steps to start selling on Farmlink
-        </p>
-      </div>
-
-      {/* Progress steps */}
-      <div className="flex justify-center">
-        <div className="flex items-center gap-4">
-          {[1, 2, 3].map((step) => (
-            <div key={step} className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                  step === 1
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {step}
-              </div>
-              {step < 3 && <div className="h-px w-8 bg-muted" />}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Setup form placeholder */}
-      <div className="rounded-xl border bg-card p-8">
-        <h2 className="font-display text-lg font-semibold">
-          Step 1: Basic Information
-        </h2>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Farm setup wizard will be implemented in Phase E
-        </p>
-
-        <div className="mt-8 space-y-4">
-          <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
-          <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
-          <div className="h-24 w-full animate-pulse rounded-md bg-muted" />
-        </div>
-
-        <div className="mt-8 flex justify-end">
-          <button
-            disabled
-            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground opacity-50"
-          >
-            Continue
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white -m-6">
+      <FarmSetupWizard 
+        userId={user.id} 
+        userEmail={user.email || ""} 
+        existingFarm={farmData}
+      />
     </div>
   );
 }

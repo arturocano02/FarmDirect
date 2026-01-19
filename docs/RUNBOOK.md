@@ -1073,11 +1073,118 @@ Users with matching emails are automatically promoted to admin on login.
 
 ### Testing Admin Access
 
-1. Sign up with a new account
-2. Click "Have an invite code?" and enter `FARMADMIN26`
-3. Complete signup and verify email
-4. On first login, you should be redirected to `/admin`
-5. Or use the email allowlist approach instead
+**Method 1: Using Admin Keyword (FARMADMIN26)**
+1. Go to `/signup`
+2. Choose any role (customer or farm)
+3. Fill out name, email, password
+4. Click "Have an invite code?" to reveal the code field
+5. Enter `FARMADMIN26` (case-sensitive)
+6. Submit the form
+7. Verify email if required
+8. On login, you should be redirected to `/admin`
+
+**Method 2: Using Email Allowlist**
+1. Add your email to `.env.local`:
+   ```env
+   ADMIN_EMAILS=youremail@example.com
+   ```
+2. Restart the dev server (`pnpm dev`)
+3. Sign up or log in with that email
+4. You should be automatically promoted to admin and redirected to `/admin`
+
+**Method 3: Using make-admin Script**
+```bash
+# Promote an existing user to admin
+pnpm make-admin youremail@example.com
+```
+This requires the user to have already signed up.
+
+### Admin Console End-to-End Test Checklist
+
+Use this checklist to verify admin functionality after setup:
+
+**Setup**
+- [ ] Set `ADMIN_EMAILS=youremail@example.com` in `.env.local`
+- [ ] Set `ADMIN_CLAIM_CODE=FARMADMIN26` in `.env.local` (or use default)
+- [ ] Restart dev server: `pnpm dev`
+
+**Login & Access**
+- [ ] Log in with email in ADMIN_EMAILS → Redirected to `/admin`
+- [ ] See "Admin Console" link in user dropdown menu
+- [ ] Admin dashboard loads with KPI cards
+- [ ] Sidebar navigation works: Overview, Orders, Farms, Users, Emails, Settings
+
+**Admin Console Pages**
+- [ ] `/admin` - Dashboard shows order stats, revenue, farm counts
+- [ ] `/admin/orders` - Table of orders with filters (status, farm, date range)
+- [ ] `/admin/orders/[id]` - Order detail with status updater and timeline
+- [ ] `/admin/farms` - Table of farms with approve/suspend actions
+- [ ] `/admin/farms/[id]` - Farm detail page
+- [ ] `/admin/users` - User table with role badges
+- [ ] `/admin/settings` - Settings page loads
+
+**Admin Orders Page Verification (Critical)**
+- [ ] Page loads without 500 error
+- [ ] No "Event handlers cannot be passed to Client Component" error
+- [ ] Farm filter dropdown works (changes URL, reloads with filter)
+- [ ] Status filter chips work (clicking filters orders)
+- [ ] Date range chips work (Today, 7 days, 30 days)
+- [ ] Search form works (searches orders, customers, farms)
+- [ ] Order row shows: order number, customer name, farm name, status, payment, total, postcode, date
+- [ ] Clicking order number navigates to `/admin/orders/[id]`
+
+**Admin Order Status Updates**
+- [ ] Open `/admin/orders/[id]` for any order
+- [ ] Change status in dropdown → Click "Update Order"
+- [ ] Success message appears briefly
+- [ ] Status badge updates in header
+- [ ] New event appears in Order Timeline
+- [ ] Returning to `/admin/orders` shows updated status
+- [ ] Check database: `order_events` table has new row with status change
+
+**Role Protection**
+- [ ] Log out and log in as customer → Redirected to `/farms`
+- [ ] Customer cannot access `/admin` → Redirected away
+- [ ] Log in as farm user → Redirected to `/farm-portal`
+- [ ] Farm user cannot access `/admin` → Redirected away
+
+**Health Endpoints (for debugging)**
+```bash
+# Check current user role
+curl http://localhost:3000/api/health/me
+
+# Check admin access (should return 403 if not admin)
+curl http://localhost:3000/api/health/admin
+
+# Check farm data access
+curl http://localhost:3000/api/health/public-farms
+```
+
+### Debugging Role Issues
+
+If admin is not recognized:
+
+1. **Check profile role in database:**
+   - Go to Supabase Dashboard → Table Editor → profiles
+   - Find your user by ID and check the `role` column
+
+2. **Check console logs (dev only):**
+   - Look for `[roles:...]` log messages showing role detection
+   - Example: `[roles:middleware] { email: "adm...", effectiveRole: "admin" }`
+
+3. **Manually set role via script:**
+   ```bash
+   pnpm make-admin youremail@example.com
+   ```
+
+4. **Check ADMIN_EMAILS env var:**
+   - Ensure no typos in email
+   - Ensure proper comma separation for multiple emails
+   - Restart dev server after changes
+
+5. **Clear browser session:**
+   - Open DevTools → Application → Clear site data
+   - Log in again
 
 ---
 
@@ -1094,6 +1201,138 @@ Users with matching emails are automatically promoted to admin on login.
 - [ ] Farm onboarding creates farm with `status='pending'` (not public until approved)
 - [ ] `ADMIN_CLAIM_CODE` is a strong secret (not easily guessable)
 - [ ] Admin claim rate limiting is enabled
+
+---
+
+## Farm Setup Wizard Test Checklist
+
+Use this checklist to verify the farm setup wizard functionality:
+
+### Prerequisites
+- Ensure Supabase is running and migrations are applied
+- Storage buckets `farm-images` and `product-images` exist with proper policies
+
+### Creating a Farm User
+
+1. **Sign Up as Farm User**
+   - Go to `/signup`
+   - Select "I want to sell" (farm role)
+   - Complete signup with email verification
+   - User should have `profiles.role = 'farm'`
+
+2. **Access Farm Portal**
+   - After login, farm user should be redirected to `/farm-portal/setup`
+   - Verify the wizard loads with 5 steps visible
+
+### Wizard Step 1: Basic Info
+
+- [ ] Fill in farm name (required)
+- [ ] URL slug auto-generates from name
+- [ ] Short description is required
+- [ ] Contact email defaults to user email
+- [ ] Story field is optional
+- [ ] Click "Continue" creates farm row in database with `status='pending'`
+- [ ] Verify farm row exists: `SELECT * FROM farms WHERE owner_user_id = '<user_id>'`
+
+### Wizard Step 2: Location & Delivery
+
+- [ ] Address field is required
+- [ ] Postcode field is required  
+- [ ] Delivery postcodes must have at least one entry
+- [ ] At least one delivery day must be selected
+- [ ] Cutoff time has sensible default (6 PM)
+- [ ] Min order value stored in pence (£20.00 = 2000)
+- [ ] Delivery fee stored in pence (£4.99 = 499)
+
+### Wizard Step 3: Branding
+
+- [ ] Hero image upload works (uploads to `farm-images/{farm_id}/`)
+- [ ] Hero image preview displays after selection
+- [ ] Logo upload works (uploads to `farm-images/{farm_id}/`)
+- [ ] Logo preview displays after selection
+- [ ] Can proceed without images (warning shown)
+- [ ] Images persist after upload (URLs saved to farm row)
+
+### Wizard Step 4: Products
+
+- [ ] At least one product with name and price required
+- [ ] Product image upload works (uploads to `product-images/{farm_id}/`)
+- [ ] Can add multiple products
+- [ ] Can remove products
+- [ ] Can reorder products (up/down arrows)
+- [ ] Unit label dropdown works
+- [ ] Stock quantity is optional (blank = unlimited)
+- [ ] Active/inactive toggle works
+
+### Wizard Step 5: Review & Submit
+
+- [ ] Shows summary of all farm details
+- [ ] Shows delivery settings summary
+- [ ] Shows branding images (or placeholders if missing)
+- [ ] Shows products count and list
+- [ ] "What happens next" section is visible
+- [ ] "Submit for Approval" button is prominent
+
+### After Submission
+
+- [ ] Clicking submit saves all products
+- [ ] User is redirected to `/farm-portal?submitted=true`
+- [ ] Success banner appears: "Farm Submitted for Approval!"
+- [ ] Farm status shows "Awaiting Approval" banner
+- [ ] Dashboard shows KPI cards (0 orders, 0 revenue initially)
+
+### Returning to Setup
+
+- [ ] If farm user logs out and logs back in
+- [ ] They should go to dashboard (not setup) since farm exists
+- [ ] Can access settings via `/farm-portal/profile` to edit details
+
+### Role-Based Access Control
+
+- [ ] Customer cannot access `/farm-portal/*` (redirected to `/farms`)
+- [ ] Admin cannot access `/farm-portal/*` (redirected to `/admin`)
+- [ ] Farm user cannot access `/admin` (redirected to `/farm-portal`)
+- [ ] Farm user cannot access `/checkout` (redirected to `/farm-portal`)
+
+### Storage Permissions
+
+- [ ] Farm can upload to their own folder: `farm-images/{their_farm_id}/*`
+- [ ] Farm cannot upload to another farm's folder
+- [ ] Product images go to: `product-images/{farm_id}/{product_id}/*`
+
+### Database Verification
+
+```sql
+-- Check farm was created correctly
+SELECT id, name, slug, status, owner_user_id, 
+       short_description, address, postcode, 
+       delivery_days, min_order_value, delivery_fee,
+       hero_image_url, logo_url
+FROM farms 
+WHERE owner_user_id = '<your_farm_user_id>';
+
+-- Check products were created
+SELECT id, name, price, is_active, image_url, sort_order
+FROM products 
+WHERE farm_id = '<your_farm_id>'
+ORDER BY sort_order;
+
+-- Verify RLS: Another user cannot see this farm's products (until approved)
+-- Test by logging in as different user and checking /farm/[slug]
+```
+
+### Quick Smoke Test Commands
+
+```bash
+# Start dev server
+pnpm dev
+
+# In another terminal, check health
+curl http://localhost:3000/api/health
+
+# Check public farms (approved farms visible)
+curl http://localhost:3000/api/health/public-farms
+```
 
 ---
 

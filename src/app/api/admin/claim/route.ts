@@ -54,19 +54,19 @@ export async function POST(request: Request) {
     }
 
     // Get the secret admin claim code from environment
-    const adminClaimCode = process.env.ADMIN_CLAIM_CODE;
+    // Support both ADMIN_CLAIM_CODE and ADMIN_KEYWORD
+    const adminClaimCode = process.env.ADMIN_CLAIM_CODE || process.env.ADMIN_KEYWORD;
 
     if (!adminClaimCode) {
-      console.error("[admin/claim] ADMIN_CLAIM_CODE not configured");
-      // Return generic error to not reveal configuration status
-      return NextResponse.json(
-        { success: false, message: "Invalid access code." },
-        { status: 401 }
-      );
+      console.error("[admin/claim] ADMIN_CLAIM_CODE/ADMIN_KEYWORD not configured, using default");
+      // Fall back to default code (less secure but functional for dev)
     }
 
+    // Use default keyword if not set in env
+    const expectedCode = adminClaimCode || "FARMADMIN26";
+
     // Validate the code (exact match, case-sensitive)
-    if (code !== adminClaimCode) {
+    if (code !== expectedCode) {
       console.log(
         `[admin/claim] Invalid code attempt: IP=${clientIp}, email=${normalizedEmail}`
       );

@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDistanceToNow } from "@/lib/utils/date";
 import { 
   Search, 
-  Filter, 
   Clock,
   CheckCircle,
   Package,
@@ -12,6 +11,7 @@ import {
   AlertTriangle,
   ChevronRight
 } from "lucide-react";
+import { FarmFilterSelect } from "./orders-filters-client";
 
 export const metadata = {
   title: "Orders",
@@ -38,6 +38,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = await createClient();
 
+  // Dev-only logging
+  if (process.env.NODE_ENV === "development") {
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log("[admin/orders] Fetching orders for user:", user?.id ?? "anon");
+  }
+
   // Calculate date ranges
   const now = new Date();
   const ranges: Record<string, Date> = {
@@ -46,7 +52,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
     "30d": new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
   };
 
-  // Build query
+  // Build query - use left joins (no !inner) to avoid empty results when profiles/farms are missing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (supabase as any)
     .from("orders")
@@ -59,8 +65,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
       delivery_address,
       delivery_postcode,
       created_at,
-      farms!inner(id, name, slug),
-      profiles!inner(name, id)
+      farm_id,
+      customer_user_id,
+      farms(id, name, slug),
+      profiles(id, name)
     `)
     .order("created_at", { ascending: false });
 
@@ -83,8 +91,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   if (error) {
     console.error("[admin/orders] Error fetching orders:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("[admin/orders] Error details:", JSON.stringify(error, null, 2));
+    }
   }
 
+  // Type with nullable joins for safety
   const orders = (ordersData || []) as Array<{
     id: string;
     order_number: string;
@@ -94,8 +106,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
     delivery_address: string;
     delivery_postcode: string | null;
     created_at: string;
-    farms: { id: string; name: string; slug: string };
-    profiles: { id: string; name: string | null };
+    farm_id: string;
+    customer_user_id: string;
+    farms: { id: string; name: string; slug: string } | null;
+    profiles: { id: string; name: string | null } | null;
   }>;
 
   // Apply search filter (client-side for now)
@@ -104,8 +118,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
     const searchLower = params.search.toLowerCase();
     filteredOrders = orders.filter(order =>
       order.order_number.toLowerCase().includes(searchLower) ||
-      (order.profiles.name?.toLowerCase().includes(searchLower)) ||
-      order.farms.name.toLowerCase().includes(searchLower) ||
+      (order.profiles?.name?.toLowerCase().includes(searchLower)) ||
+      (order.farms?.name?.toLowerCase().includes(searchLower)) ||
       (order.delivery_postcode?.toLowerCase().includes(searchLower))
     );
   }
@@ -223,30 +237,11 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
               ))}
             </div>
 
-            {/* Farm dropdown */}
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-slate-400" />
-              <select
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                value={params.farm || ""}
-                onChange={(e) => {
-                  const url = new URL(window.location.href);
-                  if (e.target.value) {
-                    url.searchParams.set("farm", e.target.value);
-                  } else {
-                    url.searchParams.delete("farm");
-                  }
-                  window.location.href = url.toString();
-                }}
-              >
-                <option value="">All Farms</option>
-                {farms.map((farm) => (
-                  <option key={farm.id} value={farm.id}>
-                    {farm.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Farm dropdown - client component for interactivity */}
+            <FarmFilterSelect 
+              farms={farms} 
+              currentFarmId={params.farm} 
+            />
           </div>
         </div>
 
@@ -364,16 +359,20 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <p className="text-sm font-medium text-slate-900">
-                        {order.profiles.name || "Guest"}
+                        {order.profiles?.name || "Guest"}
                       </p>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <Link 
-                        href={`/admin/farms/${order.farms.id}`}
-                        className="text-sm text-slate-600 hover:text-orange-600"
-                      >
-                        {order.farms.name}
-                      </Link>
+                      {order.farms ? (
+                        <Link 
+                          href={`/admin/farms/${order.farms.id}`}
+                          className="text-sm text-slate-600 hover:text-orange-600"
+                        >
+                          {order.farms.name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-slate-400">Unknown Farm</span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusBadgeClass(order.status)}`}>

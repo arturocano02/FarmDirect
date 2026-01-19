@@ -42,6 +42,7 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
   const [badges, setBadges] = useState<string[]>(farm.badges || []);
   const [heroImageUrl, setHeroImageUrl] = useState(farm.hero_image_url || "");
   const [contactEmail, setContactEmail] = useState(farm.contact_email || "");
+  const [receiveOrderEmails, setReceiveOrderEmails] = useState(farm.receive_order_emails ?? true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -130,6 +131,7 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
         badges: badges.length > 0 ? badges : null,
         hero_image_url: heroImageUrl || null,
         contact_email: contactEmail.trim() || null,
+        receive_order_emails: receiveOrderEmails,
       };
 
       const response = await fetch(`/api/farm/profile`, {
@@ -414,6 +416,25 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
             />
           </div>
         </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="rounded-xl border bg-card p-6">
+        <h2 className="font-display text-lg font-semibold mb-4">Notifications</h2>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={receiveOrderEmails}
+            onChange={(e) => setReceiveOrderEmails(e.target.checked)}
+            className="mt-0.5 rounded border-gray-300"
+          />
+          <div>
+            <p className="font-medium text-sm">Receive order emails</p>
+            <p className="text-sm text-muted-foreground">
+              Get notified when customers place new orders
+            </p>
+          </div>
+        </label>
       </div>
 
       {/* Submit */}

@@ -34,14 +34,20 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
-  // Fetch order with related data
+  // Dev-only logging
+  if (process.env.NODE_ENV === "development") {
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log("[admin/orders/[id]] Fetching order for user:", user?.id ?? "anon");
+  }
+
+  // Fetch order with related data - use left joins (no !inner) for safety
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: order, error } = await (supabase as any)
     .from("orders")
     .select(`
       *,
-      farms!inner(id, name, slug, contact_email, postcode),
-      profiles!inner(id, name),
+      farms(id, name, slug, contact_email, postcode),
+      profiles(id, name),
       order_items(
         id,
         product_name,
@@ -64,13 +70,16 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
   if (error || !order) {
     console.error("[admin/orders/[id]] Error:", error);
+    if (process.env.NODE_ENV === "development" && error) {
+      console.error("[admin/orders/[id]] Error details:", JSON.stringify(error, null, 2));
+    }
     notFound();
   }
 
-  // Get customer email from auth.users (if we have service role, this would work)
-  // For now, we'll use profile name and order email if available
+  // Get customer info - handle nullable joins safely
   const customerName = order.profiles?.name || "Guest Customer";
   const customerEmail = order.customer_email || null;
+  const farmData = order.farms || { id: null, name: "Unknown Farm", slug: "", contact_email: null, postcode: null };
 
   // Format date
   const orderDate = new Date(order.created_at);
@@ -331,33 +340,39 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
               </h2>
             </div>
             <div className="p-5 space-y-3">
-              <Link 
-                href={`/admin/farms/${order.farms.id}`}
-                className="text-sm font-medium text-orange-600 hover:text-orange-700 hover:underline"
-              >
-                {order.farms.name}
-              </Link>
-              {order.farms.contact_email && (
+              {farmData.id ? (
+                <Link 
+                  href={`/admin/farms/${farmData.id}`}
+                  className="text-sm font-medium text-orange-600 hover:text-orange-700 hover:underline"
+                >
+                  {farmData.name}
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-slate-500">{farmData.name}</span>
+              )}
+              {farmData.contact_email && (
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Mail className="h-4 w-4 text-slate-400" />
-                  <a href={`mailto:${order.farms.contact_email}`} className="hover:text-orange-600">
-                    {order.farms.contact_email}
+                  <a href={`mailto:${farmData.contact_email}`} className="hover:text-orange-600">
+                    {farmData.contact_email}
                   </a>
                 </div>
               )}
-              {order.farms.postcode && (
+              {farmData.postcode && (
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <MapPin className="h-4 w-4 text-slate-400" />
-                  {order.farms.postcode}
+                  {farmData.postcode}
                 </div>
               )}
-              <Link
-                href={`/farm/${order.farms.slug}`}
-                target="_blank"
-                className="block text-xs text-slate-500 hover:text-orange-600"
-              >
-                View public page →
-              </Link>
+              {farmData.slug && (
+                <Link
+                  href={`/farm/${farmData.slug}`}
+                  target="_blank"
+                  className="block text-xs text-slate-500 hover:text-orange-600"
+                >
+                  View public page →
+                </Link>
+              )}
             </div>
           </div>
 

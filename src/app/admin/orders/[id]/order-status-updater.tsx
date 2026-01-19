@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Loader2, ChevronDown, MessageSquare } from "lucide-react";
+import { updateOrderStatusAction } from "../actions";
 
 interface OrderStatusUpdaterProps {
   orderId: string;
@@ -25,7 +25,7 @@ export function OrderStatusUpdater({ orderId, currentStatus }: OrderStatusUpdate
   const router = useRouter();
   const [status, setStatus] = useState(currentStatus);
   const [note, setNote] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -34,48 +34,23 @@ export function OrderStatusUpdater({ orderId, currentStatus }: OrderStatusUpdate
       return;
     }
 
-    setIsUpdating(true);
     setError(null);
     setSuccess(false);
 
-    try {
-      const supabase = createClient();
+    startTransition(async () => {
+      const result = await updateOrderStatusAction(orderId, status, note || undefined);
 
-      // Update order status
-      if (status !== currentStatus) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: updateError } = await (supabase as any)
-          .from("orders")
-          .update({ status })
-          .eq("id", orderId);
+      if (result.success) {
+        setSuccess(true);
+        setNote("");
+        router.refresh();
 
-        if (updateError) throw updateError;
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(result.error || "Failed to update order");
       }
-
-      // Add event to timeline
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: eventError } = await (supabase as any)
-        .from("order_events")
-        .insert({
-          order_id: orderId,
-          event_type: status !== currentStatus ? "status_change" : "note_added",
-          note: note || (status !== currentStatus ? `Status changed to ${status.replace("_", " ")}` : null),
-        });
-
-      if (eventError) throw eventError;
-
-      setSuccess(true);
-      setNote("");
-      router.refresh();
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      console.error("Error updating order:", err);
-      setError(err instanceof Error ? err.message : "Failed to update order");
-    } finally {
-      setIsUpdating(false);
-    }
+    });
   };
 
   return (
@@ -93,7 +68,7 @@ export function OrderStatusUpdater({ orderId, currentStatus }: OrderStatusUpdate
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              disabled={isUpdating}
+              disabled={isPending}
               className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium capitalize focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:bg-slate-50 disabled:text-slate-500"
             >
               {ORDER_STATUSES.map((s) => (
@@ -115,7 +90,7 @@ export function OrderStatusUpdater({ orderId, currentStatus }: OrderStatusUpdate
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            disabled={isUpdating}
+            disabled={isPending}
             placeholder="Internal note about this status change..."
             rows={3}
             className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:bg-slate-50 disabled:text-slate-500 resize-none"
@@ -139,10 +114,10 @@ export function OrderStatusUpdater({ orderId, currentStatus }: OrderStatusUpdate
         {/* Update button */}
         <button
           onClick={handleUpdate}
-          disabled={isUpdating || (status === currentStatus && !note)}
+          disabled={isPending || (status === currentStatus && !note)}
           className="w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors"
         >
-          {isUpdating ? (
+          {isPending ? (
             <>
               <Loader2 className="inline h-4 w-4 mr-2 animate-spin" />
               Updating...

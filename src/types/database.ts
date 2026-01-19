@@ -49,7 +49,20 @@ export interface Farm {
   min_order_value: number | null;
   delivery_fee: number | null;
   contact_email: string | null;
+  receive_order_emails: boolean | null;
   status: FarmStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FarmPayout {
+  farm_id: string;
+  payout_method: string;
+  account_holder_name: string | null;
+  sort_code: string | null;
+  account_number_last4: string | null;
+  bank_name: string | null;
+  stripe_account_id: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDistanceToNow } from "@/lib/utils/date";
-import { ShoppingBag, Package, TrendingUp, AlertCircle } from "lucide-react";
+import { ShoppingBag, Package, TrendingUp, AlertCircle, CheckCircle, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata = {
@@ -12,7 +12,14 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function FarmDashboardPage() {
+interface PageProps {
+  searchParams: Promise<{ submitted?: string; welcome?: string }>;
+}
+
+export default async function FarmDashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const showSubmittedBanner = params.submitted === "true";
+  const showWelcomeBanner = params.welcome === "true";
   const supabase = await createClient();
 
   // Get current user
@@ -84,8 +91,35 @@ export default async function FarmDashboardPage() {
         </p>
       </div>
 
+      {/* Submitted success banner */}
+      {showSubmittedBanner && (
+        <div className="rounded-lg bg-farm-50 border border-farm-200 p-4 flex items-start gap-3">
+          <CheckCircle className="h-5 w-5 text-farm-600 mt-0.5" />
+          <div>
+            <p className="font-medium text-farm-800">Farm Submitted for Approval!</p>
+            <p className="text-sm text-farm-700 mt-1">
+              Your farm has been submitted for review. Our team will review your application within 24-48 hours.
+              You can continue managing your products and settings while waiting.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Welcome banner for first-time completion */}
+      {showWelcomeBanner && !showSubmittedBanner && (
+        <div className="rounded-lg bg-gradient-to-r from-amber-50 to-farm-50 border border-amber-200 p-4 flex items-start gap-3">
+          <Sparkles className="h-5 w-5 text-amber-600 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-800">Welcome to Your Farm Dashboard!</p>
+            <p className="text-sm text-amber-700 mt-1">
+              Your farm is set up and ready. Start by adding more products or customizing your delivery settings.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Status banner */}
-      {farm.status === "pending" && (
+      {farm.status === "pending" && !showSubmittedBanner && (
         <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
           <div>

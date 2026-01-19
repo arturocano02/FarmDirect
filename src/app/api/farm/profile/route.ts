@@ -17,6 +17,7 @@ const UpdateFarmSchema = z.object({
   hero_image_url: z.string().url().nullable().optional(),
   logo_url: z.string().url().nullable().optional(),
   contact_email: z.string().email().nullable().optional(),
+  receive_order_emails: z.boolean().optional(),
 });
 
 /**

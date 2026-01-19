@@ -11,7 +11,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:sanity": "tsx scripts/sanity.ts",
     "db:print-migrations": "tsx scripts/print-migrations.ts",
-    "selfcheck": "tsx scripts/selfcheck.ts"
+    "selfcheck": "tsx scripts/selfcheck.ts",
+    "make-admin": "tsx scripts/make-admin.ts"
   },
   "dependencies": {
     "@stripe/stripe-js": "^5.5.0",

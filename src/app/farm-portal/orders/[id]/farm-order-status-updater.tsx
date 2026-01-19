@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { 
   Loader2, 
   ChevronDown, 
@@ -14,6 +13,7 @@ import {
   XCircle,
   AlertTriangle
 } from "lucide-react";
+import { updateFarmOrderStatusAction } from "../actions";
 
 interface FarmOrderStatusUpdaterProps {
   orderId: string;
@@ -42,98 +42,50 @@ export function FarmOrderStatusUpdater({ orderId, currentStatus }: FarmOrderStat
   const router = useRouter();
   const [status, setStatus] = useState(currentStatus);
   const [note, setNote] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const nextStatus = getNextStatus(currentStatus);
   const currentConfig = ORDER_STATUSES.find(s => s.value === currentStatus);
 
-  const handleQuickUpdate = async () => {
+  const handleQuickUpdate = () => {
     if (!nextStatus) return;
     
-    setIsUpdating(true);
     setError(null);
     setSuccess(false);
 
-    try {
-      const supabase = createClient();
+    startTransition(async () => {
+      const result = await updateFarmOrderStatusAction(orderId, nextStatus);
 
-      // Update order status
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase as any)
-        .from("orders")
-        .update({ status: nextStatus })
-        .eq("id", orderId);
-
-      if (updateError) throw updateError;
-
-      // Add event to timeline
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: eventError } = await (supabase as any)
-        .from("order_events")
-        .insert({
-          order_id: orderId,
-          event_type: "status_change",
-          note: `Status changed to ${nextStatus.replace("_", " ")}`,
-        });
-
-      if (eventError) throw eventError;
-
-      setSuccess(true);
-      router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      console.error("Error updating order:", err);
-      setError(err instanceof Error ? err.message : "Failed to update order");
-    } finally {
-      setIsUpdating(false);
-    }
+      if (result.success) {
+        setSuccess(true);
+        router.refresh();
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(result.error || "Failed to update order");
+      }
+    });
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = () => {
     if (status === currentStatus && !note) return;
 
-    setIsUpdating(true);
     setError(null);
     setSuccess(false);
 
-    try {
-      const supabase = createClient();
+    startTransition(async () => {
+      const result = await updateFarmOrderStatusAction(orderId, status, note || undefined);
 
-      // Update order status if changed
-      if (status !== currentStatus) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: updateError } = await (supabase as any)
-          .from("orders")
-          .update({ status })
-          .eq("id", orderId);
-
-        if (updateError) throw updateError;
+      if (result.success) {
+        setSuccess(true);
+        setNote("");
+        router.refresh();
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(result.error || "Failed to update order");
       }
-
-      // Add event to timeline
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: eventError } = await (supabase as any)
-        .from("order_events")
-        .insert({
-          order_id: orderId,
-          event_type: status !== currentStatus ? "status_change" : "note_added",
-          note: note || (status !== currentStatus ? `Status changed to ${status.replace("_", " ")}` : null),
-        });
-
-      if (eventError) throw eventError;
-
-      setSuccess(true);
-      setNote("");
-      router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      console.error("Error updating order:", err);
-      setError(err instanceof Error ? err.message : "Failed to update order");
-    } finally {
-      setIsUpdating(false);
-    }
+    });
   };
 
   const isTerminalStatus = ["delivered", "cancelled"].includes(currentStatus);
@@ -148,10 +100,10 @@ export function FarmOrderStatusUpdater({ orderId, currentStatus }: FarmOrderStat
         {nextStatus && !isTerminalStatus && (
           <button
             onClick={handleQuickUpdate}
-            disabled={isUpdating}
+            disabled={isPending}
             className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-farm-600 px-4 py-3 text-sm font-semibold text-white hover:bg-farm-700 focus:outline-none focus:ring-2 focus:ring-farm-500 focus:ring-offset-2 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors"
           >
-            {isUpdating ? (
+            {isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
@@ -189,12 +141,12 @@ export function FarmOrderStatusUpdater({ orderId, currentStatus }: FarmOrderStat
               Order Status
             </label>
             <div className="relative">
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                disabled={isUpdating}
-                className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium focus:border-farm-500 focus:outline-none focus:ring-1 focus:ring-farm-500 disabled:bg-slate-50 disabled:text-slate-500"
-              >
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              disabled={isPending}
+              className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium focus:border-farm-500 focus:outline-none focus:ring-1 focus:ring-farm-500 disabled:bg-slate-50 disabled:text-slate-500"
+            >
                 {ORDER_STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
@@ -216,7 +168,7 @@ export function FarmOrderStatusUpdater({ orderId, currentStatus }: FarmOrderStat
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              disabled={isUpdating}
+              disabled={isPending}
               placeholder="Note for your records or the customer..."
               rows={3}
               className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-farm-500 focus:outline-none focus:ring-1 focus:ring-farm-500 disabled:bg-slate-50 disabled:text-slate-500 resize-none"
@@ -244,10 +196,10 @@ export function FarmOrderStatusUpdater({ orderId, currentStatus }: FarmOrderStat
         {!isTerminalStatus && (status !== currentStatus || note) && (
           <button
             onClick={handleUpdate}
-            disabled={isUpdating}
+            disabled={isPending}
             className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-farm-500 focus:ring-offset-2 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
           >
-            {isUpdating ? (
+            {isPending ? (
               <>
                 <Loader2 className="inline h-4 w-4 mr-2 animate-spin" />
                 Updating...
@@ -265,7 +217,7 @@ export function FarmOrderStatusUpdater({ orderId, currentStatus }: FarmOrderStat
               setStatus("cancelled");
               setNote("Order cancelled by farm");
             }}
-            disabled={isUpdating}
+            disabled={isPending}
             className="w-full text-sm text-red-600 hover:text-red-700 hover:underline"
           >
             Cancel this order

@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { isAdminEmail } from "@/lib/server/admin-emails";
-import { getHomePathForRole } from "@/lib/auth/redirect-by-role";
+import { 
+  isEmailAdminAllowlisted, 
+  getEffectiveRole, 
+  getHomePathForRole,
+  logRoleDetection 
+} from "@/lib/auth/roles";
 
 /**
  * POST /api/auth/sync-role
@@ -44,31 +48,41 @@ export async function POST() {
       console.error("[sync-role] Error fetching profile:", profileError);
     }
 
-    const currentRole = profile?.role || user.user_metadata?.role || "customer";
-    let newRole = currentRole;
+    const profileRole = profile?.role || null;
+    const metadataRole = user.user_metadata?.role || null;
+    const isAllowlisted = isEmailAdminAllowlisted(email);
+    
+    // Get effective role using centralized logic
+    let newRole = getEffectiveRole({
+      sessionUser: user,
+      profileRole,
+    });
 
-    // Check if user should be admin based on email allowlist
-    if (isAdminEmail(email)) {
-      // User is in admin allowlist - promote to admin if not already
-      if (currentRole !== "admin") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: updateError } = await (supabase as any)
-          .from("profiles")
-          .update({ role: "admin" })
-          .eq("id", user.id);
+    // Log role detection
+    logRoleDetection("sync-role", {
+      email,
+      profileRole,
+      metadataRole,
+      effectiveRole: newRole,
+      isAllowlisted,
+      decision: "Determining redirect path",
+    });
 
-        if (updateError) {
-          console.error("[sync-role] Error promoting to admin:", updateError);
-        } else {
-          console.log(`[sync-role] Promoted ${email} to admin`);
-          newRole = "admin";
-        }
+    // If user is in admin allowlist but profile isn't admin, update it
+    if (isAllowlisted && profileRole !== "admin") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (supabase as any)
+        .from("profiles")
+        .update({ role: "admin" })
+        .eq("id", user.id);
+
+      if (updateError) {
+        console.error("[sync-role] Error promoting to admin:", updateError);
       } else {
+        console.log(`[sync-role] Promoted ${email} to admin via allowlist`);
         newRole = "admin";
       }
     }
-    // NOTE: We do NOT downgrade admins who are not in the list
-    // This prevents accidental lockouts if env var changes
 
     const redirectPath = getHomePathForRole(newRole);
 
