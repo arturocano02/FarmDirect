@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Sell on Farmlink | Start Your Farm Business",
-  description: "Join Farmlink as a farm seller. Reach customers looking for premium local meat. Easy setup, powerful tools, fair pricing.",
+  title: "Sell on FairFarm | Start Your Farm Business",
+  description: "Join FairFarm as a farm seller. Reach customers looking for premium local meat. Easy setup, powerful tools, fair pricing.",
 };
 
 const features = [
@@ -48,7 +48,7 @@ const benefits = [
 
 const testimonials = [
   {
-    quote: "Farmlink transformed how we sell. Orders come in automatically and customers love the convenience.",
+    quote: "FairFarm transformed how we sell. Orders come in automatically and customers love the convenience.",
     author: "Sarah M.",
     farm: "Green Valley Farm",
   },
@@ -66,7 +66,7 @@ export default function SellPage() {
       <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <span className="font-display text-xl font-bold text-farm-700">Farmlink</span>
+            <span className="font-display text-xl font-bold text-farm-700">FairFarm</span>
             <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
               for Farms
             </span>
@@ -93,14 +93,14 @@ export default function SellPage() {
         <div className="mx-auto max-w-4xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-700">
             <Users className="h-4 w-4" />
-            Join 100+ farms already selling on Farmlink
+            Join 100+ farms already selling on FairFarm
           </div>
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             Sell your farm products{" "}
             <span className="text-amber-600">directly to customers</span>
           </h1>
           <p className="mt-6 text-lg text-muted-foreground md:text-xl">
-            Farmlink connects you with customers looking for premium, locally-sourced meat.
+            FairFarm connects you with customers looking for premium, locally-sourced meat.
             No middlemen, no complicated setup—just you and your customers.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -159,7 +159,7 @@ export default function SellPage() {
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div>
           <h2 className="font-display text-3xl font-bold tracking-tight">
-            Why farms choose Farmlink
+            Why farms choose FairFarm
           </h2>
               <p className="mt-4 text-muted-foreground">
                 We&apos;re building the future of local food. Here&apos;s why farmers love us:
@@ -176,7 +176,7 @@ export default function SellPage() {
                 href="/signup?role=farm"
                 className="mt-8 inline-flex h-11 items-center justify-center rounded-lg bg-farm-600 px-6 text-sm font-medium text-white hover:bg-farm-700 transition-colors"
               >
-                Join Farmlink
+                Join FairFarm
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </div>
@@ -232,7 +232,7 @@ export default function SellPage() {
             Ready to grow your farm business?
           </h2>
           <p className="mt-4 text-lg text-white/80">
-            Join Farmlink today and start reaching new customers.
+            Join FairFarm today and start reaching new customers.
           </p>
           <Link
             href="/signup?role=farm"
@@ -249,7 +249,7 @@ export default function SellPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Farmlink. All rights reserved.
+              © {new Date().getFullYear()} FairFarm. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">

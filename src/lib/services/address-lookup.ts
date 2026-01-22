@@ -132,7 +132,7 @@ export async function searchAddress(
       }),
       {
         headers: {
-          "User-Agent": "Farmlink/1.0 (contact@farmlink.uk)",
+          "User-Agent": "FairFarm/1.0 (contact@FairFarm.uk)",
           "Accept": "application/json",
         },
       }

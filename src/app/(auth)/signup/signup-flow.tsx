@@ -139,10 +139,10 @@ export function SignupFlow() {
             <Leaf className="h-6 w-6 text-farm-600" />
           </div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">
-            Join Farmlink
+            Join FairFarm
           </h1>
           <p className="text-sm text-muted-foreground">
-            How would you like to use Farmlink?
+            How would you like to use FairFarm?
           </p>
         </div>
 

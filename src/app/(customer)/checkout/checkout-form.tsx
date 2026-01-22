@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { useCartStore } from "@/lib/stores/cart";
 import { AddressPicker } from "@/components/address/address-picker";
 import { Loader2, ShoppingBag, ArrowLeft, MapPin, FileText, AlertCircle } from "lucide-react";
 import type { Address } from "@/types/database";
+import { getFarmFallbackImage } from "@/lib/utils/image-fallbacks";
 
 interface NewAddressData {
   isNew: true;
@@ -311,17 +312,16 @@ export function CheckoutForm() {
             
             {/* Farm info */}
             <div className="mt-4 flex items-center gap-3 pb-4 border-b">
-              {farm.hero_image_url && (
-                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                  <Image
-                    src={farm.hero_image_url}
-                    alt={farm.name}
-                    fill
-                    className="object-cover"
-                    sizes="48px"
-                  />
-                </div>
-              )}
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                <ImageWithFallback
+                  src={farm.hero_image_url}
+                  fallbackSrc={getFarmFallbackImage()}
+                  alt={farm.name}
+                  fill
+                  className="object-cover"
+                  sizes="48px"
+                />
+              </div>
               <div>
                 <p className="font-medium">{farm.name}</p>
                 <p className="text-xs text-muted-foreground">{items.length} items</p>

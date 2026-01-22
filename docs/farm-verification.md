@@ -1,6 +1,6 @@
 # Farm Portal Verification Guide
 
-This document describes how to test the farm owner experience in Farmlink.
+This document describes how to test the farm owner experience in FairFarm.
 
 ## Prerequisites
 

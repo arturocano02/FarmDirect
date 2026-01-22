@@ -314,7 +314,7 @@ export function FarmOnboardingWizard({ userId, userEmail }: FarmOnboardingWizard
           </div>
           <h1 className="font-display text-3xl font-bold">Set up your farm</h1>
           <p className="mt-2 text-muted-foreground">
-            Complete these steps to start selling on Farmlink
+            Complete these steps to start selling on FairFarm
           </p>
         </div>
 
@@ -389,7 +389,7 @@ export function FarmOnboardingWizard({ userId, userEmail }: FarmOnboardingWizard
                     URL Slug *
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">farmlink.uk/farm/</span>
+                    <span className="text-sm text-muted-foreground">FairFarm.uk/farm/</span>
                     <input
                       type="text"
                       value={farmSlug}

@@ -1,8 +1,8 @@
-# Farmlink - Architecture Document
+# FairFarm - Architecture Document
 
 ## Overview
 
-Farmlink is a two-sided meat marketplace built with a modern serverless architecture. This document outlines the technical architecture, key design decisions, and system components.
+FairFarm is a two-sided meat marketplace built with a modern serverless architecture. This document outlines the technical architecture, key design decisions, and system components.
 
 ## Tech Stack
 
@@ -22,7 +22,7 @@ Farmlink is a two-sided meat marketplace built with a modern serverless architec
 ## Project Structure
 
 ```
-farmlink/
+FairFarm/
 ├── docs/                    # Documentation
 │   ├── PRD.md              # Product requirements
 │   ├── ARCHITECTURE.md     # This file

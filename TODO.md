@@ -1,6 +1,6 @@
-# Farmlink - Development TODO
+# FairFarm - Development TODO
 
-This checklist tracks the development progress of Farmlink across six phases.
+This checklist tracks the development progress of FairFarm across six phases.
 
 ---
 

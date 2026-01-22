@@ -1,8 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Plus, Package, Pencil } from "lucide-react";
+import { getProductFallbackImage } from "@/lib/utils/image-fallbacks";
 
 export const metadata = {
   title: "Products",
@@ -97,19 +98,14 @@ export default async function FarmProductsPage() {
             <div key={product.id} className="rounded-xl border bg-card overflow-hidden group">
               {/* Product Image */}
               <div className="relative aspect-square bg-muted">
-                {product.image_url ? (
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <Package className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
+                <ImageWithFallback
+                  src={product.image_url}
+                  fallbackSrc={getProductFallbackImage(product.name)}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
                 
                 {/* Status badge */}
                 <div className="absolute top-2 left-2">

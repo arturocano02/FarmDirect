@@ -1,5 +1,5 @@
 /**
- * Self-check script for Farmlink
+ * Self-check script for FairFarm
  * Verifies environment, database connection, and basic data integrity
  *
  * Run with: pnpm selfcheck
@@ -47,7 +47,7 @@ function warn(name: string, message: string) {
 }
 
 async function main() {
-  console.log("\n🔍 Farmlink Self-Check\n");
+  console.log("\n🔍 FairFarm Self-Check\n");
   console.log("=".repeat(50));
 
   // 1. Check required environment variables

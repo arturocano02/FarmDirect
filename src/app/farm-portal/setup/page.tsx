@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { FarmSetupWizard } from "@/components/farm-portal/setup-wizard";
 
 export const metadata = {
-  title: "Farm Setup | Farmlink",
-  description: "Set up your farm profile on Farmlink",
+  title: "Farm Setup | FairFarm",
+  description: "Set up your farm profile on FairFarm",
 };
 
 export default async function FarmSetupPage() {

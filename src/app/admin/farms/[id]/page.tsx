@@ -1,11 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDistanceToNow } from "@/lib/utils/date";
 import { 
   ArrowLeft,
-  Store,
   MapPin,
   Mail,
   ExternalLink,
@@ -15,6 +14,8 @@ import {
   Truck
 } from "lucide-react";
 import { FarmStatusActions } from "./farm-status-actions";
+import { FarmEditForm } from "./farm-edit-form";
+import { getFarmFallbackImage } from "@/lib/utils/image-fallbacks";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -166,19 +167,14 @@ export default async function AdminFarmDetailPage({ params }: PageProps) {
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             {/* Hero image */}
             <div className="relative h-48 bg-slate-100">
-              {farm.hero_image_url ? (
-                <Image
-                  src={farm.hero_image_url}
-                  alt={farm.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 66vw"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Store className="h-16 w-16 text-slate-300" />
-                </div>
-              )}
+              <ImageWithFallback
+                src={farm.hero_image_url}
+                fallbackSrc={getFarmFallbackImage()}
+                alt={farm.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 66vw"
+              />
             </div>
 
             <div className="p-6 space-y-4">
@@ -349,6 +345,16 @@ export default async function AdminFarmDetailPage({ params }: PageProps) {
 
         {/* Right column - Actions & Owner Info */}
         <div className="space-y-6">
+          {/* Edit Form */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
+              <h2 className="font-semibold text-slate-900">Edit Farm Details</h2>
+            </div>
+            <div className="p-5">
+              <FarmEditForm farm={farm} />
+            </div>
+          </div>
+
           {/* Status Actions */}
           <FarmStatusActions farmId={farm.id} currentStatus={farm.status} />
 

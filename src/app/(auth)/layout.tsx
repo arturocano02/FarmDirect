@@ -12,7 +12,7 @@ export default function AuthLayout({
           href="/"
           className="mb-8 font-display text-2xl font-bold text-farm-700"
         >
-          Farmlink
+          FairFarm
         </Link>
         <div className="w-full max-w-md">
           <div className="rounded-xl border bg-card p-8 shadow-sm">

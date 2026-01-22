@@ -18,7 +18,7 @@ import { formatDistanceToNow } from "@/lib/utils/date";
 
 export const metadata = {
   title: "Overview",
-  description: "Farmlink admin console overview",
+  description: "FairFarm admin console overview",
 };
 
 export const dynamic = "force-dynamic";

@@ -1,5 +1,5 @@
 /**
- * Farmlink Seed Script
+ * FairFarm Seed Script
  *
  * Populates Supabase Cloud with test data using SERVICE ROLE KEY (bypasses RLS):
  * - 20 approved farms with realistic data and Unsplash images
@@ -627,7 +627,7 @@ async function getDatabaseCounts() {
 // =============================================================================
 
 async function seed() {
-  console.log("\n🌱 Farmlink Database Seed\n");
+  console.log("\n🌱 FairFarm Database Seed\n");
   console.log("=".repeat(60));
   console.log(`   Target: ${farms.length} farms × ${baseProducts.length} products = ${farms.length * baseProducts.length} products`);
   console.log("=".repeat(60));

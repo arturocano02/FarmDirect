@@ -32,7 +32,7 @@ function printMigrations() {
   }
 
   console.log("-- ============================================");
-  console.log("-- Farmlink Database Migrations");
+  console.log("-- FairFarm Database Migrations");
   console.log("-- ============================================");
   console.log("--");
   console.log("-- Instructions:");

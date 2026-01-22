@@ -1,6 +1,6 @@
-# Farmlink - Product Requirements Document
+# FairFarm - Product Requirements Document
 
-**Product name (working):** Farmlink  
+**Product name (working):** FairFarm  
 **Platform:** Web app (mobile first, responsive desktop)  
 **Tech stack (target):** Next.js + Supabase + Stripe + transactional email (Resend or Postmark)  
 **V1 focus:** Meat marketplace with one farm per order, paid checkout, farm portal, admin ops console

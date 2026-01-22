@@ -1,4 +1,4 @@
--- Farmlink Storage Buckets
+-- FairFarm Storage Buckets
 -- Creates storage buckets for farm and product images
 
 -- ============================================

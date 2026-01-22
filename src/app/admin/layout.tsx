@@ -8,7 +8,7 @@ export const metadata = {
     template: "%s | Admin Console",
     default: "Admin Console",
   },
-  description: "Farmlink Admin Console",
+  description: "FairFarm Admin Console",
 };
 
 export default async function AdminLayout({

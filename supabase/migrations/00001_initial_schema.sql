@@ -1,4 +1,4 @@
--- Farmlink Initial Schema
+-- FairFarm Initial Schema
 -- This migration creates all core tables, enums, and RLS policies
 
 -- ============================================

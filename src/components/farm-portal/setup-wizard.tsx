@@ -739,7 +739,7 @@ export function FarmSetupWizard({ userId, userEmail, existingFarm }: FarmSetupWi
             {existingFarm ? "Complete Your Farm Setup" : "Set Up Your Farm"}
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Complete these steps to start selling on Farmlink
+            Complete these steps to start selling on FairFarm
           </p>
         </div>
 
@@ -832,7 +832,7 @@ export function FarmSetupWizard({ userId, userEmail, existingFarm }: FarmSetupWi
                     URL Slug <span className="text-red-500">*</span>
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">farmlink.uk/farm/</span>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">FairFarm.uk/farm/</span>
                     <input
                       type="text"
                       value={farmSlug}
@@ -1340,7 +1340,7 @@ export function FarmSetupWizard({ userId, userEmail, existingFarm }: FarmSetupWi
                     <dt className="text-muted-foreground">Name</dt>
                     <dd className="font-medium">{farmName}</dd>
                     <dt className="text-muted-foreground">URL</dt>
-                    <dd className="font-medium">farmlink.uk/farm/{farmSlug}</dd>
+                    <dd className="font-medium">FairFarm.uk/farm/{farmSlug}</dd>
                     <dt className="text-muted-foreground">Description</dt>
                     <dd className="font-medium col-span-2 mt-1">{shortDescription}</dd>
                   </dl>

@@ -6,7 +6,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM || "Farmlink <noreply@farmlink.uk>";
+const EMAIL_FROM = process.env.EMAIL_FROM || "FairFarm <noreply@FairFarm.uk>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 interface EmailPayload {
@@ -179,7 +179,7 @@ export async function sendOrderConfirmationEmail(order: {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="color: #2d5a27; margin-bottom: 5px;">🌿 Farmlink</h1>
+    <h1 style="color: #2d5a27; margin-bottom: 5px;">🌿 FairFarm</h1>
     <p style="color: #666;">Premium Meat, Straight from the Farm</p>
   </div>
   
@@ -229,8 +229,8 @@ export async function sendOrderConfirmationEmail(order: {
   <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
   
   <p style="color: #666; font-size: 12px; text-align: center;">
-    Questions? Contact us at support@farmlink.uk<br>
-    Farmlink - Premium Meat from Local Farms
+    Questions? Contact us at support@FairFarm.uk<br>
+    FairFarm - Premium Meat from Local Farms
   </p>
 </body>
 </html>`;
@@ -256,7 +256,7 @@ ${order.delivery_address}
 
 Track your order: ${process.env.NEXT_PUBLIC_APP_URL}/orders
 
-Questions? Contact support@farmlink.uk
+Questions? Contact support@FairFarm.uk
 `;
 
   return sendEmail({
@@ -325,7 +325,7 @@ export async function sendNewOrderFarmEmail(order: {
   <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
   
   <p style="color: #666; font-size: 12px;">
-    This is an automated notification from Farmlink.
+    This is an automated notification from FairFarm.
   </p>
 </body>
 </html>`;
@@ -395,7 +395,7 @@ export async function sendNewOrderAdminEmail(order: {
 
   return sendEmail({
     to: ADMIN_EMAIL,
-    subject: `[Farmlink] New Order ${order.order_number}`,
+    subject: `[FairFarm] New Order ${order.order_number}`,
     html,
     templateName: "new_order_admin",
     metadata: { order_number: order.order_number },

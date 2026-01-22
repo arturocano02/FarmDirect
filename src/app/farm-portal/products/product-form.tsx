@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { Loader2, Upload, X, Package } from "lucide-react";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
+import { Loader2, Upload, X } from "lucide-react";
 import type { Product } from "@/types/database";
+import { getProductFallbackImage } from "@/lib/utils/image-fallbacks";
 
 interface ProductFormProps {
   product?: Product;
@@ -168,26 +169,21 @@ export function ProductForm({ product, farmId }: ProductFormProps) {
         <div className="flex items-start gap-6">
           {/* Preview */}
           <div className="relative h-32 w-32 rounded-lg bg-muted overflow-hidden shrink-0">
-            {imageUrl ? (
-              <>
-                <Image
-                  src={imageUrl}
-                  alt="Product"
-                  fill
-                  className="object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => setImageUrl("")}
-                  className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Package className="h-8 w-8 text-muted-foreground" />
-              </div>
+            <ImageWithFallback
+              src={imageUrl}
+              fallbackSrc={getProductFallbackImage(name)}
+              alt="Product"
+              fill
+              className="object-cover"
+            />
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl("")}
+                className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"
+              >
+                <X className="h-4 w-4" />
+              </button>
             )}
           </div>
 

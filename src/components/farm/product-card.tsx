@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { ShoppingBag, Plus } from "lucide-react";
 import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { useCartStore, useCartItemQuantity, formatPrice } from "@/lib/stores/cart";
@@ -11,6 +11,7 @@ import { AuthRequiredModal } from "@/components/auth/auth-required-modal";
 import { isInStock, getStockStatus, getStockStatusClass } from "@/lib/utils/product-helpers";
 import type { Product, Farm } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { getProductFallbackImage } from "@/lib/utils/image-fallbacks";
 
 interface ProductCardProps {
   product: Product;
@@ -89,19 +90,14 @@ export function ProductCard({ product, farm, onDifferentFarm }: ProductCardProps
     <article className="group relative rounded-xl border bg-card overflow-hidden transition-shadow hover:shadow-md">
       {/* Product Image */}
       <div className="relative aspect-square overflow-hidden bg-muted">
-        {product.image_url ? (
-          <Image
-            src={product.image_url}
-            alt={product.name}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-earth-100 to-farm-100">
-            <span className="text-3xl">🥩</span>
-          </div>
-        )}
+        <ImageWithFallback
+          src={product.image_url}
+          fallbackSrc={getProductFallbackImage(product.name)}
+          alt={product.name}
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        />
 
         {/* Out of stock overlay */}
         {!inStock && (

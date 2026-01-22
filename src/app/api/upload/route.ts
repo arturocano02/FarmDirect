@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
-const ALLOWED_BUCKETS = ["farm-images", "product-images"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_BUCKETS = ["farm-images", "product-images", "farm-videos", "product-videos"];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (for videos)
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB (for images)
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
 /**
  * POST /api/upload
  * Upload a file to Supabase Storage
+ * Uses service role client to bypass RLS for uploads
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -37,18 +41,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No path provided" }, { status: 400 });
   }
 
+  // Determine if this is an image or video based on bucket
+  const isVideo = bucket.includes("video");
+  const allowedTypes = isVideo ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
+  const maxSize = isVideo ? MAX_FILE_SIZE : MAX_IMAGE_SIZE;
+
   // Validate file type
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  if (!allowedTypes.includes(file.type)) {
     return NextResponse.json(
-      { error: "Invalid file type. Allowed: JPG, PNG, WebP, GIF" },
+      { 
+        error: isVideo 
+          ? "Invalid file type. Allowed: MP4, WebM, QuickTime" 
+          : "Invalid file type. Allowed: JPG, PNG, WebP, GIF" 
+      },
       { status: 400 }
     );
   }
 
   // Validate file size
-  if (file.size > MAX_FILE_SIZE) {
+  if (file.size > maxSize) {
     return NextResponse.json(
-      { error: "File too large. Maximum size is 5MB" },
+      { 
+        error: isVideo
+          ? `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`
+          : `File too large. Maximum size is ${MAX_IMAGE_SIZE / (1024 * 1024)}MB`
+      },
       { status: 400 }
     );
   }
@@ -86,8 +103,11 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer
     const buffer = await file.arrayBuffer();
 
+    // Use service role client for uploads to bypass RLS
+    const serviceClient = await createServiceClient();
+
     // Upload to Supabase Storage
-    const { data, error: uploadError } = await supabase.storage
+    const { data, error: uploadError } = await serviceClient.storage
       .from(bucket)
       .upload(path, buffer, {
         contentType: file.type,
@@ -102,8 +122,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
+    // Get public URL using service client
+    const { data: urlData } = serviceClient.storage
       .from(bucket)
       .getPublicUrl(data.path);
 
@@ -115,7 +135,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[api/upload] Error:", error);
     return NextResponse.json(
-      { error: "Upload failed" },
+      { error: error instanceof Error ? error.message : "Upload failed" },
       { status: 500 }
     );
   }

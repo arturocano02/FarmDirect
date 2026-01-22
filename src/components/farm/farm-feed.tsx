@@ -68,8 +68,8 @@ export function FarmFeed({ farms, allBadges }: FarmFeedProps) {
       {/* Farm grid */}
       {filteredFarms.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredFarms.map((farm) => (
-            <FarmCard key={farm.id} farm={farm} />
+          {filteredFarms.map((farm, index) => (
+            <FarmCard key={farm.id} farm={farm} priority={index < 3} />
           ))}
         </div>
       ) : (

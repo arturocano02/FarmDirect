@@ -42,10 +42,25 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
   // Fetch order with related data - use left joins (no !inner) for safety
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: order, error } = await (supabase as any)
-    .from("orders")
-    .select(`
-      *,
+  const baseSelect = `
+      id,
+      order_number,
+      status,
+      payment_status,
+      payment_method,
+      subtotal,
+      delivery_fee,
+      total,
+      delivery_address,
+      delivery_address_json,
+      delivery_notes,
+      created_at,
+      farm_id,
+      customer_user_id,
+      customer_email,
+      customer_email_snapshot,
+      customer_phone,
+      stripe_payment_intent_id,
       farms(id, name, slug, contact_email, postcode),
       profiles(id, name),
       order_items(
@@ -63,10 +78,37 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         note,
         created_at
       )
-    `)
+    `;
+
+  const selectWithRequestedDate = `
+      ${baseSelect},
+      requested_delivery_date
+    `;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let { data: order, error } = await (supabase as any)
+    .from("orders")
+    .select(selectWithRequestedDate)
     .eq("id", id)
     .order("created_at", { foreignTable: "order_events", ascending: false })
     .single();
+
+  if (error?.message?.includes("requested_delivery_date")) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const retry = await (supabase as any)
+      .from("orders")
+      .select(baseSelect)
+      .eq("id", id)
+      .order("created_at", { foreignTable: "order_events", ascending: false })
+      .single();
+
+    order = retry.data;
+    error = retry.error;
+
+    if (!retry.error) {
+      console.warn("[admin/orders/[id]] requested_delivery_date column missing; fell back without it.");
+    }
+  }
 
   if (error || !order) {
     console.error("[admin/orders/[id]] Error:", error);
@@ -216,18 +258,18 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                   <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">
                     {order.delivery_address}
                   </p>
-                  {order.delivery_postcode && (
+                  {(order.delivery_address_json as { postcode?: string } | null)?.postcode && (
                     <p className="text-sm font-mono text-slate-500 mt-1">
-                      {order.delivery_postcode}
+                      {(order.delivery_address_json as { postcode?: string } | null)?.postcode}
                     </p>
                   )}
                 </div>
               </div>
-              {order.delivery_instructions && (
+              {order.delivery_notes && (
                 <div className="rounded-lg bg-amber-50 p-3">
                   <p className="text-sm font-medium text-amber-800">Delivery Instructions</p>
                   <p className="text-sm text-amber-700 mt-1">
-                    {order.delivery_instructions}
+                    {order.delivery_notes}
                   </p>
                 </div>
               )}

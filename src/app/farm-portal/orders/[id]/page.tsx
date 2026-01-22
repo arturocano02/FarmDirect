@@ -44,11 +44,12 @@ interface FarmOrderWithRelations {
   delivery_fee: number;
   total: number;
   delivery_address: string;
-  delivery_postcode: string | null;
-  delivery_instructions: string | null;
-  requested_delivery_date: string | null;
+  delivery_address_json: Record<string, unknown> | null;
+  delivery_notes: string | null;
+  requested_delivery_date?: string | null;
   created_at: string;
   customer_email: string | null;
+  customer_email_snapshot: string | null;
   customer_phone: string | null;
   customer: { name: string | null } | null;
   order_items: OrderItem[];
@@ -103,10 +104,20 @@ export default async function FarmOrderDetailPage({ params }: FarmOrderDetailPag
 
   // Fetch order (must belong to this farm)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: orderData, error } = await (supabase as any)
-    .from("orders")
-    .select(`
-      *,
+  const baseSelect = `
+      id,
+      order_number,
+      status,
+      subtotal,
+      delivery_fee,
+      total,
+      delivery_address,
+      delivery_address_json,
+      delivery_notes,
+      created_at,
+      customer_email,
+      customer_email_snapshot,
+      customer_phone,
       customer:profiles!customer_user_id(name),
       order_items(
         id,
@@ -123,11 +134,39 @@ export default async function FarmOrderDetailPage({ params }: FarmOrderDetailPag
         note,
         created_at
       )
-    `)
+    `;
+
+  const selectWithRequestedDate = `
+      ${baseSelect},
+      requested_delivery_date
+    `;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let { data: orderData, error } = await (supabase as any)
+    .from("orders")
+    .select(selectWithRequestedDate)
     .eq("id", id)
     .eq("farm_id", farm.id)
     .order("created_at", { foreignTable: "order_events", ascending: false })
     .single();
+
+  if (error?.message?.includes("requested_delivery_date")) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const retry = await (supabase as any)
+      .from("orders")
+      .select(baseSelect)
+      .eq("id", id)
+      .eq("farm_id", farm.id)
+      .order("created_at", { foreignTable: "order_events", ascending: false })
+      .single();
+
+    orderData = retry.data;
+    error = retry.error;
+
+    if (!retry.error) {
+      console.warn("[farm-order] requested_delivery_date column missing; fell back without it.");
+    }
+  }
 
   if (error || !orderData) {
     console.error("[farm-order] Error fetching order:", error);
@@ -258,9 +297,9 @@ export default async function FarmOrderDetailPage({ params }: FarmOrderDetailPag
                   <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">
                     {order.delivery_address}
                   </p>
-                  {order.delivery_postcode && (
+                  {(order.delivery_address_json as { postcode?: string } | null)?.postcode && (
                     <p className="text-sm font-mono text-slate-500 mt-1">
-                      {order.delivery_postcode}
+                      {(order.delivery_address_json as { postcode?: string } | null)?.postcode}
                     </p>
                   )}
                 </div>
@@ -283,10 +322,10 @@ export default async function FarmOrderDetailPage({ params }: FarmOrderDetailPag
                 </div>
               )}
 
-              {order.delivery_instructions && (
+              {order.delivery_notes && (
                 <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
                   <p className="text-sm font-medium text-amber-800">Delivery Instructions</p>
-                  <p className="text-sm text-amber-700 mt-1">{order.delivery_instructions}</p>
+                  <p className="text-sm text-amber-700 mt-1">{order.delivery_notes}</p>
                 </div>
               )}
             </div>

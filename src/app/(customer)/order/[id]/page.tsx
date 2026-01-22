@@ -49,7 +49,7 @@ interface OrderWithRelations {
 export async function generateMetadata({ params }: OrderDetailPageProps) {
   const { id } = await params;
   return {
-    title: `Order ${id.slice(0, 8)} | Farmlink`,
+    title: `Order ${id.slice(0, 8)} | FairFarm`,
     description: "View your order details and tracking",
   };
 }
@@ -312,8 +312,8 @@ export default async function OrderDetailPage({ params, searchParams }: OrderDet
               <h3 className="font-medium mb-2">Need help?</h3>
               <p className="text-sm text-muted-foreground">
                 Contact support at{" "}
-                <a href="mailto:support@farmlink.uk" className="text-farm-600 hover:underline">
-                  support@farmlink.uk
+                <a href="mailto:support@FairFarm.uk" className="text-farm-600 hover:underline">
+                  support@FairFarm.uk
                 </a>
               </p>
             </div>

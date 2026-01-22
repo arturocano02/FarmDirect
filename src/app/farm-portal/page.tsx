@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 
 export const metadata = {
   title: "Farm Dashboard",
-  description: "Manage your farm on Farmlink",
+  description: "Manage your farm on FairFarm",
 };
 
 export const dynamic = "force-dynamic";

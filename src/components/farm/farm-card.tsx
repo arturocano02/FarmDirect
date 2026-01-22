@@ -1,35 +1,33 @@
 "use client";
 
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import Link from "next/link";
 import { MapPin, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatBadge, getBadgeColorClass } from "@/lib/utils/badge-helpers";
 import type { Farm } from "@/types/database";
+import { getFarmFallbackImage } from "@/lib/utils/image-fallbacks";
 
 interface FarmCardProps {
   farm: Farm & { product_count?: number };
+  priority?: boolean;
 }
 
-export function FarmCard({ farm }: FarmCardProps) {
+export function FarmCard({ farm, priority = false }: FarmCardProps) {
   return (
     <Link href={`/farm/${farm.slug}`} className="group">
       <article className="farm-card overflow-hidden">
         {/* Hero Image */}
         <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-          {farm.hero_image_url ? (
-            <Image
-              src={farm.hero_image_url}
-              alt={farm.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-earth-100 to-farm-100">
-              <span className="text-4xl">🌾</span>
-            </div>
-          )}
+          <ImageWithFallback
+            src={farm.hero_image_url}
+            fallbackSrc={getFarmFallbackImage()}
+            alt={farm.name}
+            fill
+            priority={priority}
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
           
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />

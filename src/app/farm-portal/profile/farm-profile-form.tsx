@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { Loader2, Upload, X, Store, AlertCircle, CheckCircle } from "lucide-react";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
+import { Loader2, Upload, X, AlertCircle, CheckCircle } from "lucide-react";
 import type { Farm } from "@/types/database";
+import { getFarmFallbackImage } from "@/lib/utils/image-fallbacks";
 
 interface FarmProfileFormProps {
   farm: Farm;
@@ -41,6 +42,8 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
   const [deliveryFee, setDeliveryFee] = useState(farm.delivery_fee ? (farm.delivery_fee / 100).toFixed(2) : "");
   const [badges, setBadges] = useState<string[]>(farm.badges || []);
   const [heroImageUrl, setHeroImageUrl] = useState(farm.hero_image_url || "");
+  const [storyVideoUrl, setStoryVideoUrl] = useState(farm.story_video_url || "");
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [contactEmail, setContactEmail] = useState(farm.contact_email || "");
   const [receiveOrderEmails, setReceiveOrderEmails] = useState(farm.receive_order_emails ?? true);
 
@@ -92,6 +95,49 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
     }
   }
 
+  async function handleVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      setError("Please select a video file");
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      setError("Video must be less than 50MB");
+      return;
+    }
+
+    setIsUploadingVideo(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bucket", "farm-videos");
+      formData.append("path", `${farm.id}/${Date.now()}-story.${file.name.split('.').pop()}`);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Upload failed");
+      }
+
+      const data = await response.json();
+      setStoryVideoUrl(data.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setIsUploadingVideo(false);
+    }
+  }
+
   function toggleDeliveryDay(day: string) {
     setDeliveryDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -130,6 +176,7 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
         delivery_fee: deliveryFee ? Math.round(parseFloat(deliveryFee) * 100) : null,
         badges: badges.length > 0 ? badges : null,
         hero_image_url: heroImageUrl || null,
+        story_video_url: storyVideoUrl || null,
         contact_email: contactEmail.trim() || null,
         receive_order_emails: receiveOrderEmails,
       };
@@ -141,9 +188,18 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save profile");
+      const data = await response.json();
+      
+      if (!response.ok || !data.ok) {
+        const errorMessage = data.error || "Failed to save profile";
+        if (process.env.NODE_ENV === "development") {
+          console.error("[farm-profile-form] Update failed:", {
+            status: response.status,
+            error: errorMessage,
+            details: data.details,
+          });
+        }
+        throw new Error(errorMessage);
       }
 
       setSuccess(true);
@@ -192,26 +248,22 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
         
         <div className="flex items-start gap-6">
           <div className="relative h-32 w-48 rounded-lg bg-muted overflow-hidden shrink-0">
-            {heroImageUrl ? (
-              <>
-                <Image
-                  src={heroImageUrl}
-                  alt="Farm hero"
-                  fill
-                  className="object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => setHeroImageUrl("")}
-                  className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Store className="h-8 w-8 text-muted-foreground" />
-              </div>
+            <ImageWithFallback
+              src={heroImageUrl}
+              fallbackSrc={getFarmFallbackImage()}
+              alt="Farm hero"
+              fill
+              sizes="(max-width: 768px) 100vw, 192px"
+              className="object-cover"
+            />
+            {heroImageUrl && (
+              <button
+                type="button"
+                onClick={() => setHeroImageUrl("")}
+                className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"
+              >
+                <X className="h-4 w-4" />
+              </button>
             )}
           </div>
 
@@ -280,6 +332,52 @@ export function FarmProfileForm({ farm }: FarmProfileFormProps) {
             rows={5}
             className="w-full rounded-lg border bg-background px-4 py-2 text-sm"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Story Video <span className="text-muted-foreground font-normal">(optional)</span>
+          </label>
+          {storyVideoUrl ? (
+            <div className="space-y-2">
+              <video
+                src={storyVideoUrl}
+                controls
+                className="w-full rounded-lg border"
+                style={{ maxHeight: "300px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setStoryVideoUrl("")}
+                className="text-sm text-red-600 hover:underline"
+              >
+                Remove video
+              </button>
+            </div>
+          ) : (
+            <label className="block">
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={handleVideoUpload}
+                disabled={isUploadingVideo}
+                className="hidden"
+              />
+              <div className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed px-4 py-3 hover:border-primary transition-colors">
+                {isUploadingVideo ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="text-sm">
+                  {isUploadingVideo ? "Uploading video..." : "Upload story video"}
+                </span>
+              </div>
+            </label>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">
+            MP4, WebM or QuickTime. Max 50MB. Video will appear above your story section.
+          </p>
         </div>
 
         <div>

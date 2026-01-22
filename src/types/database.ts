@@ -40,6 +40,7 @@ export interface Farm {
   short_description: string | null;
   hero_image_url: string | null;
   logo_url: string | null;
+  story_video_url: string | null;
   address: string | null;
   postcode: string | null;
   postcode_rules: string[] | null;
@@ -107,6 +108,7 @@ export interface Order {
   delivery_address: string;
   delivery_address_json: DeliveryAddressJson | null;
   delivery_notes: string | null;
+  requested_delivery_date: string | null;
   delivery_window: string | null;
   customer_email_snapshot: string | null;
   stripe_checkout_session_id: string | null;

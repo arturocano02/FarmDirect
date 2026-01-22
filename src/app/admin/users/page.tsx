@@ -6,9 +6,9 @@ import {
   Store,
   Shield,
   ShoppingBag,
-  ChevronRight,
   Users
 } from "lucide-react";
+import { UserRoleEditor } from "./user-role-editor";
 
 export const metadata = {
   title: "Users",
@@ -247,9 +247,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <button className="text-slate-400 hover:text-slate-600">
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
+                        <UserRoleEditor userId={profile.id} currentRole={profile.role} />
                       </td>
                     </tr>
                   );

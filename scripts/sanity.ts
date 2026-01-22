@@ -1,5 +1,5 @@
 /**
- * Farmlink Sanity Check Script
+ * FairFarm Sanity Check Script
  *
  * Verifies database state by checking counts of approved farms and active products.
  * Exits with code 1 if farms count is 0 (indicating a problem).
@@ -42,7 +42,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function sanityCheck() {
-  console.log("\n🔍 Farmlink Database Sanity Check\n");
+  console.log("\n🔍 FairFarm Database Sanity Check\n");
   console.log("=".repeat(50));
   console.log(`   Supabase URL: ${supabaseUrl}`);
   console.log("=".repeat(50));

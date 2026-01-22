@@ -5,7 +5,7 @@ import { formatDistanceToNow } from "@/lib/utils/date";
 import { Package, ArrowRight, ShoppingBag } from "lucide-react";
 
 export const metadata = {
-  title: "My Orders | Farmlink",
+  title: "My Orders | FairFarm",
   description: "View your order history",
 };
 

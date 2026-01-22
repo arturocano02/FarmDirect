@@ -1,4 +1,4 @@
-# Farmlink - Runbook
+# FairFarm - Runbook
 
 This document provides instructions for local development and deployment using **Supabase Cloud** (no Docker required).
 
@@ -14,7 +14,7 @@ This document provides instructions for local development and deployment using *
 ```bash
 # 1. Clone and install
 git clone <repository-url>
-cd Farmlink
+cd FairFarm
 pnpm install
 
 # 2. Create Supabase project and get credentials
@@ -79,7 +79,7 @@ If `pnpm db:sanity` reports "0 farms", something went wrong. Check:
 2. Click "New Project"
 3. Choose your organization
 4. Enter project details:
-   - **Name:** Farmlink (or your choice)
+   - **Name:** FairFarm (or your choice)
    - **Database Password:** Generate a strong password (save it!)
    - **Region:** Choose the closest to your users
 5. Click "Create new project"
@@ -271,7 +271,7 @@ If you need to modify the schema:
 1. Go to [vercel.com](https://vercel.com)
 2. Click "Add New Project"
 3. Import your Git repository
-4. Select the Farmlink project
+4. Select the FairFarm project
 
 ### Step 2: Configure Build Settings
 
@@ -337,7 +337,7 @@ ADMIN_EMAIL=admin@yourdomain.com
 
 ### Health Check APIs
 
-Farmlink includes several health check endpoints for debugging and verification:
+FairFarm includes several health check endpoints for debugging and verification:
 
 **GET `/api/health`** - General health check (no auth required):
 ```bash
@@ -699,7 +699,7 @@ For production, set up [Resend](https://resend.com):
 
 ```env
 RESEND_API_KEY=re_xxx...
-EMAIL_FROM=Farmlink <orders@yourdomain.com>
+EMAIL_FROM=FairFarm <orders@yourdomain.com>
 ADMIN_EMAIL=admin@yourdomain.com
 ```
 
@@ -1037,7 +1037,7 @@ At each step:
 
 ## Discreet Admin Signup
 
-Farmlink includes a discreet way for admins to self-register during signup without exposing obvious admin UI.
+FairFarm includes a discreet way for admins to self-register during signup without exposing obvious admin UI.
 
 ### How It Works
 

@@ -205,7 +205,7 @@ export function LoginForm() {
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-background px-2 text-muted-foreground">
-            New to Farmlink?
+            New to FairFarm?
           </span>
         </div>
       </div>

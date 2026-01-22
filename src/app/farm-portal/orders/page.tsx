@@ -38,8 +38,9 @@ interface Order {
   total: number;
   created_at: string;
   delivery_address: string;
-  delivery_postcode: string | null;
-  requested_delivery_date: string | null;
+  delivery_address_json: Record<string, unknown> | null;
+  delivery_notes: string | null;
+  requested_delivery_date?: string | null;
   customer: {
     name: string | null;
   } | null;
@@ -74,21 +75,45 @@ export default async function FarmOrdersPage({ searchParams }: PageProps) {
 
   // Fetch farm's orders
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: ordersData, error } = await (supabase as any)
-    .from("orders")
-    .select(`
+  const baseSelect = `
       id,
       order_number,
       status,
       total,
       created_at,
       delivery_address,
-      delivery_postcode,
-      requested_delivery_date,
+      delivery_address_json,
+      delivery_notes,
       customer:profiles!customer_user_id(name)
-    `)
+    `;
+
+  const selectWithRequestedDate = `
+      ${baseSelect},
+      requested_delivery_date
+    `;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let { data: ordersData, error } = await (supabase as any)
+    .from("orders")
+    .select(selectWithRequestedDate)
     .eq("farm_id", farm.id)
     .order("created_at", { ascending: false });
+
+  if (error?.message?.includes("requested_delivery_date")) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const retry = await (supabase as any)
+      .from("orders")
+      .select(baseSelect)
+      .eq("farm_id", farm.id)
+      .order("created_at", { ascending: false });
+
+    ordersData = retry.data;
+    error = retry.error;
+
+    if (!retry.error) {
+      console.warn("[farm-orders] requested_delivery_date column missing; fell back without it.");
+    }
+  }
 
   if (error) {
     console.error("[farm-orders] Error fetching orders:", error);
@@ -123,8 +148,9 @@ export default async function FarmOrdersPage({ searchParams }: PageProps) {
   );
 
   const dueSoon = filteredOrders.filter(o => {
-    if (!o.requested_delivery_date) return false;
-    const deliveryDate = new Date(o.requested_delivery_date);
+    const requestedDate = o.requested_delivery_date ?? null;
+    if (!requestedDate) return false;
+    const deliveryDate = new Date(requestedDate);
     const daysDiff = Math.ceil((deliveryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return daysDiff <= 2 && daysDiff >= 0 && !["delivered", "cancelled"].includes(o.status);
   });
@@ -289,7 +315,7 @@ export default async function FarmOrdersPage({ searchParams }: PageProps) {
                         <div className="flex items-center gap-1 mt-0.5 text-xs text-slate-500">
                           <MapPin className="h-3 w-3" />
                           <span className="truncate max-w-[120px]">
-                            {order.delivery_postcode || order.delivery_address.split("\n")[0]}
+                            {(order.delivery_address_json as { postcode?: string } | null)?.postcode || order.delivery_address.split("\n")[0]}
                           </span>
                         </div>
                       </td>

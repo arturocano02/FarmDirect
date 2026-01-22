@@ -13,8 +13,8 @@ import {
 import { SignOutButton } from "./sign-out-button";
 
 export const metadata = {
-  title: "My Account | Farmlink",
-  description: "Manage your Farmlink account",
+  title: "My Account | FairFarm",
+  description: "Manage your FairFarm account",
 };
 
 export default async function AccountPage() {

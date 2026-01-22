@@ -18,7 +18,7 @@ export default function CustomerLayout({
               <Leaf className="h-4 w-4 text-farm-600" />
             </div>
             <span className="font-display text-xl font-bold text-farm-700">
-              Farmlink
+              FairFarm
             </span>
           </Link>
           
@@ -53,7 +53,7 @@ export default function CustomerLayout({
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <span className="font-display text-lg font-bold text-farm-700">
-                Farmlink
+                FairFarm
               </span>
               <p className="text-sm text-muted-foreground">
                 Premium meat, straight from local farms
@@ -61,7 +61,7 @@ export default function CustomerLayout({
             </div>
             <nav className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link href="/sell" className="hover:text-foreground transition-colors">
-                Sell on Farmlink
+                Sell on FairFarm
               </Link>
               <span>© {new Date().getFullYear()}</span>
             </nav>

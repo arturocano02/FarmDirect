@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { createClient } from "@/lib/supabase/server";
 import { formatDistanceToNow } from "@/lib/utils/date";
 import { 
@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Mail
 } from "lucide-react";
+import { getFarmFallbackImage } from "@/lib/utils/image-fallbacks";
 
 export const metadata = {
   title: "Farms",
@@ -211,19 +212,14 @@ export default async function AdminFarmsPage({ searchParams }: PageProps) {
             >
               {/* Image */}
               <div className="relative h-36 bg-slate-100">
-                {farm.hero_image_url ? (
-                  <Image
-                    src={farm.hero_image_url}
-                    alt={farm.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <Store className="h-10 w-10 text-slate-300" />
-                  </div>
-                )}
+                <ImageWithFallback
+                  src={farm.hero_image_url}
+                  fallbackSrc={getFarmFallbackImage()}
+                  alt={farm.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
                 {/* Status badge */}
                 <div className="absolute top-3 right-3">
                   <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusBadge(farm.status)}`}>

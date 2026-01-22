@@ -110,7 +110,7 @@ export function AdminHeader({ user }: AdminHeaderProps) {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-display text-base font-bold text-slate-900">
-                    Farmlink
+                    FairFarm
                   </span>
                   <span className="text-xs font-medium text-orange-600">
                     Admin Console

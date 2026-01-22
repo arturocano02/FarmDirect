@@ -3,7 +3,7 @@
 > tsx scripts/print-migrations.ts
 
 -- ============================================
--- Farmlink Database Migrations
+-- FairFarm Database Migrations
 -- ============================================
 --
 -- Instructions:
@@ -21,14 +21,16 @@
 --   - 00005_addresses.sql
 --   - 00006_email_outbox_and_order_enhancements.sql
 --   - 00007_fix_public_farm_access.sql
+--   - 00008_farm_payouts_and_notifications.sql
+--   - 00009_add_video_support.sql
 --
 -- ============================================
 
 -- ============================================
--- Migration 1/7: 00001_initial_schema.sql
+-- Migration 1/9: 00001_initial_schema.sql
 -- ============================================
 
--- Farmlink Initial Schema
+-- FairFarm Initial Schema
 -- This migration creates all core tables, enums, and RLS policies
 
 -- ============================================
@@ -564,10 +566,10 @@ CREATE POLICY "Admins can insert internal notes"
 
 
 -- ============================================
--- Migration 2/7: 00002_storage_buckets.sql
+-- Migration 2/9: 00002_storage_buckets.sql
 -- ============================================
 
--- Farmlink Storage Buckets
+-- FairFarm Storage Buckets
 -- Creates storage buckets for farm and product images
 
 -- ============================================
@@ -705,7 +707,7 @@ USING (
 
 
 -- ============================================
--- Migration 3/7: 00003_fix_rls_recursion.sql
+-- Migration 3/9: 00003_fix_rls_recursion.sql
 -- ============================================
 
 -- Migration: Fix RLS Policy Recursion (42P17)
@@ -919,7 +921,7 @@ CREATE POLICY "Admins can insert internal notes"
 
 
 -- ============================================
--- Migration 4/7: 00004_order_insert_policies.sql
+-- Migration 4/9: 00004_order_insert_policies.sql
 -- ============================================
 
 -- Migration: Add proper RLS policies for customer order creation
@@ -1044,7 +1046,7 @@ GRANT EXECUTE ON FUNCTION public.generate_order_number() TO authenticated;
 
 
 -- ============================================
--- Migration 5/7: 00005_addresses.sql
+-- Migration 5/9: 00005_addresses.sql
 -- ============================================
 
 -- Migration: Add customer addresses table
@@ -1149,7 +1151,7 @@ CREATE POLICY "Admins can read all addresses"
 
 
 -- ============================================
--- Migration 6/7: 00006_email_outbox_and_order_enhancements.sql
+-- Migration 6/9: 00006_email_outbox_and_order_enhancements.sql
 -- ============================================
 
 -- Migration: Add email_outbox table and enhance orders
@@ -1254,7 +1256,7 @@ END $$;
 
 
 -- ============================================
--- Migration 7/7: 00007_fix_public_farm_access.sql
+-- Migration 7/9: 00007_fix_public_farm_access.sql
 -- ============================================
 
 -- Migration: Fix Public Farm Access for Anonymous Users
@@ -1383,6 +1385,294 @@ GRANT SELECT ON public.products TO anon;
 -- - Query 1: Returns approved farms
 -- - Query 2: Returns active products from approved farms  
 -- - Query 3: Returns false
+
+
+
+-- ============================================
+-- Migration 8/9: 00008_farm_payouts_and_notifications.sql
+-- ============================================
+
+-- Farm Payouts Table and Notification Preferences
+-- This migration adds:
+-- 1. farm_payouts table for storing payout/bank details
+-- 2. receive_order_emails column to farms table
+-- 3. contact_email column to farms table (if not exists)
+
+-- ============================================
+-- Add contact_email and receive_order_emails to farms
+-- ============================================
+
+-- Add contact_email if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'farms' AND column_name = 'contact_email'
+  ) THEN
+    ALTER TABLE farms ADD COLUMN contact_email TEXT;
+  END IF;
+END $$;
+
+-- Add receive_order_emails if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'farms' AND column_name = 'receive_order_emails'
+  ) THEN
+    ALTER TABLE farms ADD COLUMN receive_order_emails BOOLEAN DEFAULT true;
+  END IF;
+END $$;
+
+-- ============================================
+-- Farm Payouts Table
+-- ============================================
+
+-- Create farm_payouts table if it doesn't exist
+CREATE TABLE IF NOT EXISTS farm_payouts (
+  farm_id UUID PRIMARY KEY REFERENCES farms(id) ON DELETE CASCADE,
+  payout_method TEXT NOT NULL DEFAULT 'bank_transfer',
+  account_holder_name TEXT,
+  sort_code TEXT, -- UK sort code (6 digits)
+  account_number_last4 TEXT, -- Only store last 4 digits for security
+  bank_name TEXT,
+  stripe_account_id TEXT, -- For future Stripe Connect integration
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Add indexes
+CREATE INDEX IF NOT EXISTS idx_farm_payouts_farm ON farm_payouts(farm_id);
+
+-- ============================================
+-- RLS Policies for farm_payouts
+-- ============================================
+
+-- Enable RLS
+ALTER TABLE farm_payouts ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Farm owners can read their payout settings" ON farm_payouts;
+DROP POLICY IF EXISTS "Farm owners can insert their payout settings" ON farm_payouts;
+DROP POLICY IF EXISTS "Farm owners can update their payout settings" ON farm_payouts;
+DROP POLICY IF EXISTS "Admins can read all payout settings" ON farm_payouts;
+
+-- Farm owner can read their own payout settings
+CREATE POLICY "Farm owners can read their payout settings"
+  ON farm_payouts FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = farm_payouts.farm_id
+      AND farms.owner_user_id = auth.uid()
+    )
+  );
+
+-- Farm owner can insert their payout settings
+CREATE POLICY "Farm owners can insert their payout settings"
+  ON farm_payouts FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = farm_payouts.farm_id
+      AND farms.owner_user_id = auth.uid()
+    )
+  );
+
+-- Farm owner can update their payout settings
+CREATE POLICY "Farm owners can update their payout settings"
+  ON farm_payouts FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = farm_payouts.farm_id
+      AND farms.owner_user_id = auth.uid()
+    )
+  );
+
+-- Admins can read all payout settings
+CREATE POLICY "Admins can read all payout settings"
+  ON farm_payouts FOR SELECT
+  USING (public.is_admin());
+
+-- ============================================
+-- Updated at trigger for farm_payouts
+-- ============================================
+
+-- Create trigger for updated_at
+DROP TRIGGER IF EXISTS update_farm_payouts_updated_at ON farm_payouts;
+CREATE TRIGGER update_farm_payouts_updated_at
+  BEFORE UPDATE ON farm_payouts
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+
+-- ============================================
+-- VERIFICATION
+-- ============================================
+-- This migration adds:
+-- 1. farms.contact_email (for order notifications)
+-- 2. farms.receive_order_emails (boolean toggle)
+-- 3. farm_payouts table with RLS policies
+-- 
+-- Farm owners can only read/write their own payout settings
+-- Admins can read all payout settings
+
+
+
+-- ============================================
+-- Migration 9/9: 00009_add_video_support.sql
+-- ============================================
+
+-- Add video support for farms and products
+-- This migration adds story_video_url to farms table and creates video storage buckets
+
+-- ============================================
+-- ADD VIDEO COLUMN TO FARMS
+-- ============================================
+
+-- Add story_video_url column to farms table
+ALTER TABLE public.farms
+ADD COLUMN IF NOT EXISTS story_video_url TEXT;
+
+COMMENT ON COLUMN public.farms.story_video_url IS 'Optional video URL for farm story. Stored in farm-videos bucket.';
+
+-- ============================================
+-- STORAGE BUCKETS FOR VIDEOS
+-- ============================================
+
+-- Farm videos bucket (public read, authenticated write)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('farm-videos', 'farm-videos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Product videos bucket (public read, authenticated write)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('product-videos', 'product-videos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- STORAGE POLICIES: farm-videos
+-- ============================================
+
+-- Anyone can view farm videos
+CREATE POLICY IF NOT EXISTS "Anyone can view farm videos"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'farm-videos');
+
+-- Farm owners can upload their own farm videos
+CREATE POLICY IF NOT EXISTS "Farm owners can upload farm videos"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'farm-videos'
+  AND auth.role() = 'authenticated'
+  AND EXISTS (
+    SELECT 1 FROM farms
+    WHERE farms.owner_user_id = auth.uid()
+    AND (storage.foldername(name))[1] = farms.id::text
+  )
+);
+
+-- Farm owners can update their own farm videos
+CREATE POLICY IF NOT EXISTS "Farm owners can update farm videos"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'farm-videos'
+  AND auth.role() = 'authenticated'
+  AND EXISTS (
+    SELECT 1 FROM farms
+    WHERE farms.owner_user_id = auth.uid()
+    AND (storage.foldername(name))[1] = farms.id::text
+  )
+);
+
+-- Farm owners can delete their own farm videos
+CREATE POLICY IF NOT EXISTS "Farm owners can delete farm videos"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'farm-videos'
+  AND auth.role() = 'authenticated'
+  AND EXISTS (
+    SELECT 1 FROM farms
+    WHERE farms.owner_user_id = auth.uid()
+    AND (storage.foldername(name))[1] = farms.id::text
+  )
+);
+
+-- Admins can manage all farm videos
+CREATE POLICY IF NOT EXISTS "Admins can manage farm videos"
+ON storage.objects FOR ALL
+USING (
+  bucket_id = 'farm-videos'
+  AND EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  )
+);
+
+-- ============================================
+-- STORAGE POLICIES: product-videos
+-- ============================================
+
+-- Anyone can view product videos
+CREATE POLICY IF NOT EXISTS "Anyone can view product videos"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'product-videos');
+
+-- Farm owners can upload their own product videos
+CREATE POLICY IF NOT EXISTS "Farm owners can upload product videos"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'product-videos'
+  AND auth.role() = 'authenticated'
+  AND EXISTS (
+    SELECT 1 FROM farms
+    JOIN products ON products.farm_id = farms.id
+    WHERE farms.owner_user_id = auth.uid()
+    AND (storage.foldername(name))[1] = farms.id::text
+    AND (storage.foldername(name))[2] = products.id::text
+  )
+);
+
+-- Farm owners can update their own product videos
+CREATE POLICY IF NOT EXISTS "Farm owners can update product videos"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'product-videos'
+  AND auth.role() = 'authenticated'
+  AND EXISTS (
+    SELECT 1 FROM farms
+    JOIN products ON products.farm_id = farms.id
+    WHERE farms.owner_user_id = auth.uid()
+    AND (storage.foldername(name))[1] = farms.id::text
+    AND (storage.foldername(name))[2] = products.id::text
+  )
+);
+
+-- Farm owners can delete their own product videos
+CREATE POLICY IF NOT EXISTS "Farm owners can delete product videos"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'product-videos'
+  AND auth.role() = 'authenticated'
+  AND EXISTS (
+    SELECT 1 FROM farms
+    JOIN products ON products.farm_id = farms.id
+    WHERE farms.owner_user_id = auth.uid()
+    AND (storage.foldername(name))[1] = farms.id::text
+    AND (storage.foldername(name))[2] = products.id::text
+  )
+);
+
+-- Admins can manage all product videos
+CREATE POLICY IF NOT EXISTS "Admins can manage product videos"
+ON storage.objects FOR ALL
+USING (
+  bucket_id = 'product-videos'
+  AND EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  )
+);
 
 
 

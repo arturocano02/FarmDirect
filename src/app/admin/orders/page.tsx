@@ -63,7 +63,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
       payment_status,
       total,
       delivery_address,
-      delivery_postcode,
+      delivery_address_json,
+      delivery_notes,
       created_at,
       farm_id,
       customer_user_id,
@@ -104,7 +105,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
     payment_status: string | null;
     total: number;
     delivery_address: string;
-    delivery_postcode: string | null;
+    delivery_address_json: Record<string, unknown> | null;
+    delivery_notes: string | null;
     created_at: string;
     farm_id: string;
     customer_user_id: string;
@@ -116,12 +118,13 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   let filteredOrders = orders;
   if (params.search) {
     const searchLower = params.search.toLowerCase();
-    filteredOrders = orders.filter(order =>
-      order.order_number.toLowerCase().includes(searchLower) ||
-      (order.profiles?.name?.toLowerCase().includes(searchLower)) ||
-      (order.farms?.name?.toLowerCase().includes(searchLower)) ||
-      (order.delivery_postcode?.toLowerCase().includes(searchLower))
-    );
+    filteredOrders = orders.filter(order => {
+      const postcode = (order.delivery_address_json as { postcode?: string } | null)?.postcode;
+      return order.order_number.toLowerCase().includes(searchLower) ||
+        (order.profiles?.name?.toLowerCase().includes(searchLower)) ||
+        (order.farms?.name?.toLowerCase().includes(searchLower)) ||
+        (postcode?.toLowerCase().includes(searchLower) || false);
+    });
   }
 
   // Fetch farms for filter dropdown
@@ -391,7 +394,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <span className="text-xs font-mono text-slate-500">
-                        {order.delivery_postcode || "—"}
+                        {(order.delivery_address_json as { postcode?: string } | null)?.postcode || "—"}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">

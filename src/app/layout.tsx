@@ -16,8 +16,8 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "Farmlink - Premium Meat from Local Farms",
-    template: "%s | Farmlink",
+    default: "FairFarm - Premium Meat from Local Farms",
+    template: "%s | FairFarm",
   },
   description:
     "Discover and buy high-quality meat directly from trusted local farms. Fresh, traceable, and delivered to your door.",

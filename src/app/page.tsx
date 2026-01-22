@@ -81,7 +81,7 @@ export default async function HomePage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
             <span className="font-display text-xl font-bold text-farm-700">
-              Farmlink
+              FairFarm
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
@@ -207,7 +207,7 @@ export default async function HomePage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <span className="font-display text-lg font-bold text-farm-700">
-                Farmlink
+                FairFarm
               </span>
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} All rights reserved.
@@ -218,7 +218,7 @@ export default async function HomePage() {
                 href="/signup?role=farm"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Sell on Farmlink
+                Sell on FairFarm
               </Link>
               <Link
                 href="/login"

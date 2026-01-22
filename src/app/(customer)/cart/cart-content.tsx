@@ -1,12 +1,13 @@
 "use client";
 
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import Link from "next/link";
 import { Trash2, ShoppingBag, ArrowRight, Loader2 } from "lucide-react";
 import { useCartStore, formatPrice } from "@/lib/stores/cart";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { cn } from "@/lib/utils";
+import { getProductFallbackImage } from "@/lib/utils/image-fallbacks";
 
 export function CartContent() {
   const mounted = useMounted();
@@ -158,19 +159,14 @@ function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
     <div className="flex gap-4 rounded-xl border bg-card p-4">
       {/* Product image */}
       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
-        {product.image_url ? (
-          <Image
-            src={product.image_url}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="80px"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <span className="text-2xl">🥩</span>
-          </div>
-        )}
+        <ImageWithFallback
+          src={product.image_url}
+          fallbackSrc={getProductFallbackImage(product.name)}
+          alt={product.name}
+          fill
+          className="object-cover"
+          sizes="80px"
+        />
       </div>
 
       {/* Product details */}

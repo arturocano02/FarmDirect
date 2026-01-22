@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import Link from "next/link";
 import { ArrowLeft, Clock, Truck, MapPin, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { getFarmBySlug } from "@/lib/data/farms";
 import { getProductsByFarmSlug } from "@/lib/data/products";
 import { formatBadge, getBadgeColorClass } from "@/lib/data/farms";
 import { FarmProductList } from "./farm-product-list";
+import { getFarmFallbackImage } from "@/lib/utils/image-fallbacks";
 
 export const revalidate = 60; // ISR
 
@@ -47,20 +48,15 @@ export default async function FarmProfilePage({ params }: FarmProfilePageProps) 
     <div className="min-h-screen bg-background">
       {/* Hero */}
       <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden bg-muted">
-        {farm.hero_image_url ? (
-          <Image
-            src={farm.hero_image_url}
-            alt={farm.name}
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-earth-100 to-farm-100">
-            <span className="text-6xl">🌾</span>
-          </div>
-        )}
+        <ImageWithFallback
+          src={farm.hero_image_url}
+          fallbackSrc={getFarmFallbackImage()}
+          alt={farm.name}
+          fill
+          className="object-cover"
+          priority
+          sizes="100vw"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
         {/* Back button */}
@@ -174,12 +170,22 @@ export default async function FarmProfilePage({ params }: FarmProfilePageProps) 
             )}
 
             {/* Story */}
-            {farm.story && (
+            {(farm.story || farm.story_video_url) && (
               <div className="rounded-xl border bg-card p-6">
                 <h2 className="font-display text-lg font-semibold mb-4">
                   Our Story
                 </h2>
-                <FarmStory story={farm.story} />
+                {farm.story_video_url && (
+                  <div className="mb-4">
+                    <video
+                      src={farm.story_video_url}
+                      controls
+                      className="w-full rounded-lg"
+                      style={{ maxHeight: "400px" }}
+                    />
+                  </div>
+                )}
+                {farm.story && <FarmStory story={farm.story} />}
               </div>
             )}
           </div>

@@ -3,7 +3,7 @@ import { CheckoutForm } from "./checkout-form";
 import { Loader2 } from "lucide-react";
 
 export const metadata = {
-  title: "Checkout | Farmlink",
+  title: "Checkout | FairFarm",
   description: "Complete your order",
 };
 

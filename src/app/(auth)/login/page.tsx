@@ -4,7 +4,7 @@ import { LoginForm } from "./login-form";
 
 export const metadata = {
   title: "Sign In",
-  description: "Sign in to your Farmlink account",
+  description: "Sign in to your FairFarm account",
 };
 
 export default function LoginPage() {
